@@ -1,0 +1,81 @@
+import { Component, Input, Output, EventEmitter, booleanAttribute } from '@angular/core';
+
+@Component({
+  selector: 'app-button',
+  standalone: true,
+  template: `
+    <button
+      [class]="'btn ' + variant + ' ' + size"
+      [class.full-width]="fullWidth"
+      [disabled]="disabled"
+      (click)="onClick.emit($event)"
+    >
+      <ng-content></ng-content>
+    </button>
+  `,
+  styles: [`
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 0.15s ease, border-color 0.15s ease,
+        color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+    }
+    .btn:active {
+      transform: translateY(1px);
+    }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn.full-width {
+      width: 100%;
+    }
+
+    /* Размеры */
+    .sm { padding: 7px 12px; font-size: 13px; }
+    .md { padding: 10px 18px; font-size: 14px; }
+    .lg { padding: 12px 24px; font-size: 15px; }
+
+    /* Варианты */
+    .primary {
+      background: var(--accent-primary);
+      color: var(--text-on-accent);
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+    }
+    .primary:hover:not(:disabled) {
+      background: var(--accent-primary-hover);
+    }
+
+    .secondary {
+      background: var(--bg-surface);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+    .secondary:hover:not(:disabled) {
+      background: var(--bg-hover);
+    }
+
+    .danger {
+      background: var(--accent-red);
+      color: #ffffff;
+    }
+    .danger:hover:not(:disabled) {
+      filter: brightness(0.93);
+    }
+  `]
+})
+export class ButtonComponent {
+  @Input() variant: 'primary' | 'secondary' | 'danger' = 'primary';
+  @Input() size: 'sm' | 'md' | 'lg' = 'md';
+  @Input({ transform: booleanAttribute }) fullWidth = false;
+  @Input({ transform: booleanAttribute }) disabled = false;
+  @Output() onClick = new EventEmitter<Event>();
+}

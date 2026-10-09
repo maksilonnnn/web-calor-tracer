@@ -1,0 +1,23 @@
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-card',
+  standalone: true,
+  template: `
+    <ng-content />
+  `,
+  styles: [`
+    :host {
+      display: block;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-card);
+      padding: 24px;
+      transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
+  `]
+})
+export class CardComponent {
+  @Input() className = '';
+}
