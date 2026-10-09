@@ -77,4 +77,10 @@ export const mockDashboardData: DashboardData = {
     { ...mockProducts[1], id: 'r3' },
     { ...mockProducts[6], id: 'r4' },
   ],
+  goals: {
+    calories: mockSettings.dailyCalories,
+    protein: mockSettings.dailyProtein,
+    fat: mockSettings.dailyFat,
+    carbs: mockSettings.dailyCarbs,
+  },
 };

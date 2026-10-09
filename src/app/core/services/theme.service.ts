@@ -1,8 +1,8 @@
 import { Injectable, signal } from '@angular/core';
 
-export type Theme = 'light' | 'dark';
+import { STORAGE_KEYS } from '../../shared/models';
 
-const STORAGE_KEY = 'calorie-tracker-theme';
+export type Theme = 'light' | 'dark';
 
 /**
  * Централизованная система тем.
@@ -19,7 +19,7 @@ export class ThemeService {
   setTheme(theme: Theme): void {
     this.theme.set(theme);
     try {
-      localStorage.setItem(STORAGE_KEY, theme);
+      localStorage.setItem(STORAGE_KEYS.theme, theme);
     } catch {
       /* localStorage может быть недоступен */
     }
@@ -37,7 +37,7 @@ export class ThemeService {
 
 function loadTheme(): Theme {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEYS.theme);
     if (saved === 'dark' || saved === 'light') {
       return saved;
     }
