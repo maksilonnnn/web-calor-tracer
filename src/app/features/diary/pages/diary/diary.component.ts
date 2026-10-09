@@ -7,7 +7,7 @@ import { ModalComponent } from '../../../../shared/components/modal/modal.compon
 import { InputComponent } from '../../../../shared/components/input/input.component';
 import { mockDiaryEntry } from '../../../../shared/utils/mock-data';
 import { MEAL_TYPE_LABELS, MEAL_TYPE_ICONS } from '../../../../shared/models';
-import { calculateNutrition, formatDate, sumNutrition } from '../../../../shared/utils/calculations';
+import { calculateNutrition, formatDate, sumNutrition } from '../../../../shared/calculations';
 import { MealItem } from '../../../../shared/models';
 
 @Component({

@@ -1,4 +1,4 @@
-import { Product, MealItem } from '../models';
+import { Product, MealItem } from './models';
 
 export function calculateNutrition(
   product: Product,
