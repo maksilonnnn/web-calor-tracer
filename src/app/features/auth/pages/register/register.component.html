@@ -1,0 +1,55 @@
+    <div class="register-container">
+      <app-card class="register-card">
+        <div class="register-header">
+          <h1 class="register-title">Создать аккаунт</h1>
+          <p class="register-subtitle">Заполните форму для регистрации</p>
+        </div>
+
+        <form (ngSubmit)="onSubmit()" class="register-form">
+          <app-input
+            label="Имя"
+            type="text"
+            placeholder="Введите ваше имя"
+            [(ngModel)]="formData.name"
+            name="name"
+            [error]="errors.name"
+          />
+
+          <app-input
+            label="Email"
+            type="email"
+            placeholder="example@mail.com"
+            [(ngModel)]="formData.email"
+            name="email"
+            [error]="errors.email"
+          />
+
+          <app-input
+            label="Пароль"
+            type="password"
+            placeholder="Минимум 6 символов"
+            [(ngModel)]="formData.password"
+            name="password"
+            [error]="errors.password"
+          />
+
+          <app-input
+            label="Повторите пароль"
+            type="password"
+            placeholder="Повторите пароль"
+            [(ngModel)]="formData.confirmPassword"
+            name="confirmPassword"
+            [error]="errors.confirmPassword"
+          />
+
+          <app-button type="submit" size="lg" fullWidth>
+            Зарегистрироваться
+          </app-button>
+        </form>
+
+        <p class="register-footer">
+          Уже есть аккаунт?
+          <a href="/login" class="login-link">Войти</a>
+        </p>
+      </app-card>
+    </div>

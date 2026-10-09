@@ -1,0 +1,124 @@
+    <div class="settings-page">
+      <header class="page-header">
+        <div class="header-text">
+          <h1 class="page-title">Настройки</h1>
+          <p class="page-subtitle">Управление профилем и приложением</p>
+        </div>
+      </header>
+
+      <div class="settings-column">
+        <!-- Профиль -->
+        <app-card class="settings-card">
+          <div class="card-header">
+            <h2 class="card-title">Профиль</h2>
+            <p class="card-description">Эти данные отображаются в вашем профиле</p>
+          </div>
+          <div class="form-grid">
+            <app-input
+              label="Имя"
+              type="text"
+              [(ngModel)]="name"
+            />
+            <app-input
+              label="Email"
+              type="email"
+              [(ngModel)]="email"
+            />
+          </div>
+          <div class="card-actions">
+            <app-button (click)="saveProfile()">
+              Сохранить изменения
+            </app-button>
+          </div>
+        </app-card>
+
+        <!-- Отображение -->
+        <app-card class="settings-card">
+          <div class="card-header">
+            <h2 class="card-title">Отображение</h2>
+            <p class="card-description">Настройки вида данных в приложении</p>
+          </div>
+          <div class="setting-item">
+            <div class="setting-info">
+              <p class="setting-name">Показывать в калориях</p>
+              <p class="setting-description">Вместо граммов показывать калорийность</p>
+            </div>
+            <app-toggle [checked]="useCalories" (onChange)="useCalories = $event" />
+          </div>
+        </app-card>
+
+        <!-- Безопасность -->
+        <app-card class="settings-card">
+          <div class="card-header">
+            <h2 class="card-title">Безопасность</h2>
+            <p class="card-description">Управление паролем и доступом к аккаунту</p>
+          </div>
+          <div class="card-actions">
+            <app-button variant="secondary" (click)="showPasswordModal = true">
+              Сменить пароль
+            </app-button>
+          </div>
+        </app-card>
+
+        <!-- Опасная зона -->
+        <app-card class="settings-card danger-card">
+          <div class="card-header">
+            <h2 class="card-title danger-title">Опасная зона</h2>
+            <p class="card-description">
+              Удаление аккаунта приведёт к потере всех данных без возможности восстановления.
+            </p>
+          </div>
+          <div class="card-actions">
+            <app-button variant="danger" (click)="showDeleteModal = true">
+              Удалить аккаунт
+            </app-button>
+          </div>
+        </app-card>
+      </div>
+
+      <!-- Модальное окно смены пароля -->
+      <app-modal [isOpen]="showPasswordModal" [title]="'Сменить пароль'" (close)="showPasswordModal = false">
+        <div class="modal-body">
+          <app-input
+            label="Текущий пароль"
+            type="password"
+            [(ngModel)]="passwordData.current"
+          />
+          <app-input
+            label="Новый пароль"
+            type="password"
+            [(ngModel)]="passwordData.new"
+          />
+          <app-input
+            label="Повторите новый пароль"
+            type="password"
+            [(ngModel)]="passwordData.confirm"
+          />
+          <div class="modal-actions">
+            <app-button variant="secondary" fullWidth (click)="showPasswordModal = false">
+              Отмена
+            </app-button>
+            <app-button fullWidth (click)="changePassword()">
+              Сменить
+            </app-button>
+          </div>
+        </div>
+      </app-modal>
+
+      <!-- Модальное окно удаления аккаунта -->
+      <app-modal [isOpen]="showDeleteModal" [title]="'Удалить аккаунт?'" (close)="showDeleteModal = false">
+        <div class="modal-body">
+          <p class="modal-text">
+            Это действие необратимо. Все ваши данные будут удалены.
+          </p>
+          <div class="modal-actions">
+            <app-button variant="secondary" fullWidth (click)="showDeleteModal = false">
+              Отмена
+            </app-button>
+            <app-button variant="danger" fullWidth (click)="deleteAccount()">
+              Удалить
+            </app-button>
+          </div>
+        </div>
+      </app-modal>
+    </div>

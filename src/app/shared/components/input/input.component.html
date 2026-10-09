@@ -1,0 +1,23 @@
+    <div class="input-wrapper">
+      @if (label) {
+        <label class="input-label">{{ label }}</label>
+      }
+      <div class="field-wrap" [class.has-unit]="unit">
+        <input
+          class="field"
+          [type]="type"
+          [placeholder]="placeholder"
+          [value]="value"
+          [disabled]="disabled"
+          [class.has-error]="error"
+          (input)="onInput($event)"
+          (blur)="onTouched()"
+        />
+        @if (unit) {
+          <span class="field-unit">{{ unit }}</span>
+        }
+      </div>
+      @if (error) {
+        <span class="input-error">{{ error }}</span>
+      }
+    </div>

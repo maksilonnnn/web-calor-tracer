@@ -1,0 +1,107 @@
+    <div class="diary-page">
+      <!-- Заголовок страницы -->
+      <header class="page-header">
+        <div class="header-text">
+          <h1 class="page-title">Дневник питания</h1>
+          <p class="page-subtitle">{{ formatDate(selectedDate) }}</p>
+        </div>
+        <input type="date" [(ngModel)]="selectedDate" class="date-input" />
+      </header>
+
+      <div class="diary-content">
+        <!-- Приёмы пищи -->
+        <div class="meals-column">
+          @for (meal of diaryEntry.meals; track meal.id) {
+            <app-card class="meal-card">
+              <div class="meal-header">
+                <span class="meal-icon">{{ getMealIcon(meal.type) }}</span>
+                <h2 class="meal-title">{{ getMealLabel(meal.type) }}</h2>
+                <span class="meal-count">{{ meal.items.length }} продуктов</span>
+              </div>
+
+              <div class="meal-items">
+                @for (item of meal.items; track item.id) {
+                  <div class="meal-item">
+                    <div class="item-info">
+                      <p class="item-name">{{ item.product.name }}</p>
+                      <p class="item-details">{{ item.quantity }} г • {{ getNutrition(item).calories }} ккал</p>
+                    </div>
+                    <div class="item-actions">
+                      <app-button size="sm" variant="secondary" (click)="openEditModal(item)">
+                        Изменить
+                      </app-button>
+                      <app-button size="sm" variant="danger" (click)="openDeleteModal(item)">
+                        Удалить
+                      </app-button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </app-card>
+          }
+        </div>
+
+        <!-- Итого за день -->
+        <aside class="summary-column">
+          <app-card class="summary-card">
+            <h2 class="summary-title">Итого за день</h2>
+            <div class="summary-total">
+              <p class="total-value">{{ totals.calories }}</p>
+              <p class="total-label">ккал</p>
+            </div>
+            <div class="summary-macros">
+              <div class="macro-item">
+                <p class="macro-value protein">{{ totals.protein | number: '1.0-0' }}</p>
+                <p class="macro-label">белки</p>
+              </div>
+              <div class="macro-item">
+                <p class="macro-value fat">{{ totals.fat | number: '1.0-0' }}</p>
+                <p class="macro-label">жиры</p>
+              </div>
+              <div class="macro-item">
+                <p class="macro-value carbs">{{ totals.carbs | number: '1.0-0' }}</p>
+                <p class="macro-label">углеводы</p>
+              </div>
+            </div>
+          </app-card>
+        </aside>
+      </div>
+
+      <!-- Модальное окно редактирования -->
+      <app-modal [isOpen]="!!editItem" [title]="'Изменить количество'" (close)="closeEditModal()">
+        <div class="modal-body">
+          <p class="modal-product-name">{{ editItem?.product?.name }}</p>
+          <app-input
+            label="Количество (г)"
+            type="number"
+            [value]="editQuantity"
+            (valueChange)="editQuantity = $event"
+          />
+          <div class="modal-actions">
+            <app-button variant="secondary" fullWidth (click)="closeEditModal()">
+              Отмена
+            </app-button>
+            <app-button fullWidth (click)="saveEdit()">
+              Сохранить
+            </app-button>
+          </div>
+        </div>
+      </app-modal>
+
+      <!-- Модальное окно подтверждения удаления -->
+      <app-modal [isOpen]="!!deleteItem" [title]="'Удалить продукт?'" (close)="closeDeleteModal()">
+        <div class="modal-body">
+          <p class="modal-text">
+            Вы уверены, что хотите удалить «{{ deleteItem?.product?.name }}»?
+          </p>
+          <div class="modal-actions">
+            <app-button variant="secondary" fullWidth (click)="closeDeleteModal()">
+              Отмена
+            </app-button>
+            <app-button variant="danger" fullWidth (click)="confirmDelete()">
+              Удалить
+            </app-button>
+          </div>
+        </div>
+      </app-modal>
+    </div>

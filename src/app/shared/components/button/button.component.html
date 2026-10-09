@@ -1,0 +1,8 @@
+    <button
+      [class]="'btn ' + variant + ' ' + size"
+      [class.full-width]="fullWidth"
+      [disabled]="disabled"
+      (click)="onClick.emit($event)"
+    >
+      <ng-content></ng-content>
+    </button>
