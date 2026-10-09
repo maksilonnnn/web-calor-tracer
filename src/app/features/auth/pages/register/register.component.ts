@@ -1,66 +1,107 @@
-import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { CardComponent } from '../../../../shared/components/card/card.component';
+/**
+ * Страница регистрации (/register): реактивная форма, вход после успеха.
+ * Валидация — валидаторами shared/validation; тексты ошибок полей — только
+ * из ERROR_TEXTS и показываются после touched. Отказы мока (занятый email)
+ * показываются дословно через NotificationService.
+ */
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+} from '@angular/core';
+import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+
+import { AuthService } from '../../../../core/services/auth.service';
+import { toApiError } from '../../../../shared/api-error';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
+import { CardComponent } from '../../../../shared/components/card/card.component';
 import { InputComponent } from '../../../../shared/components/input/input.component';
+import { submitting } from '../../../../shared/loading/submitting';
+import { NotificationService } from '../../../../shared/notifications/notification-service';
+import { ERROR_TEXTS, INVALID_FORM_MESSAGE } from '../../../../shared/validation/error-texts';
+import {
+  emailFormat,
+  firstErrorText,
+  name as nameRule,
+  passwordMatch,
+  passwordRules,
+  requiredTrim,
+  trimFormValues,
+} from '../../../../shared/validation/validators';
 
 @Component({
   selector: 'app-register',
-  standalone: true,
-  imports: [CommonModule, FormsModule, CardComponent, ButtonComponent, InputComponent],
+  imports: [ReactiveFormsModule, RouterLink, CardComponent, ButtonComponent, InputComponent],
   templateUrl: './register.component.html',
-  styleUrl: './register.component.css'
+  styleUrl: './register.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RegisterComponent {
-  formData = {
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  };
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
-  errors = {
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  };
+  protected readonly submitState = submitting();
 
-  constructor(private router: Router) {}
+  protected readonly form = new FormGroup(
+    {
+      name: new FormControl('', { nonNullable: true, validators: [requiredTrim(), nameRule()] }),
+      email: new FormControl('', {
+        nonNullable: true,
+        validators: [requiredTrim(), emailFormat()],
+      }),
+      password: new FormControl('', {
+        nonNullable: true,
+        validators: [requiredTrim(), passwordRules()],
+      }),
+      confirmPassword: new FormControl('', { nonNullable: true, validators: [requiredTrim()] }),
+    },
+    { validators: passwordMatch('password', 'confirmPassword') },
+  );
 
-  validate(): boolean {
-    const newErrors = { name: '', email: '', password: '', confirmPassword: '' };
-
-    if (!this.formData.name.trim()) {
-      newErrors.name = 'Введите имя';
+  async onSubmit(): Promise<void> {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.notifications.notifyError(INVALID_FORM_MESSAGE);
+      return;
     }
-
-    if (!this.formData.email.trim()) {
-      newErrors.email = 'Введите email';
-    } else if (!/\S+@\S+\.\S+/.test(this.formData.email)) {
-      newErrors.email = 'Некорректный email';
-    }
-
-    if (!this.formData.password) {
-      newErrors.password = 'Введите пароль';
-    } else if (this.formData.password.length < 6) {
-      newErrors.password = 'Пароль должен быть не менее 6 символов';
-    }
-
-    if (this.formData.password !== this.formData.confirmPassword) {
-      newErrors.confirmPassword = 'Пароли не совпадают';
-    }
-
-    this.errors = newErrors;
-    return Object.values(newErrors).every((error) => !error);
+    trimFormValues(this.form);
+    const input = this.form.getRawValue();
+    await this.submitState.run(async () => {
+      try {
+        await this.auth.register(input);
+        await this.router.navigate(['/']);
+      } catch (error) {
+        this.notifications.notifyError(toApiError(error).body.message);
+      }
+    });
   }
 
-  onSubmit() {
-    if (this.validate()) {
-      // Заглушка: переход на главную
-      this.router.navigate(['/']);
+  protected nameError(): string {
+    return this.fieldError(this.form.controls.name);
+  }
+
+  protected emailError(): string {
+    return this.fieldError(this.form.controls.email);
+  }
+
+  protected passwordError(): string {
+    return this.fieldError(this.form.controls.password);
+  }
+
+  protected confirmPasswordError(): string {
+    const own = this.fieldError(this.form.controls.confirmPassword);
+    if (own !== '') {
+      return own;
     }
+    const mismatch =
+      this.form.hasError('password.mismatch') &&
+      this.form.controls.confirmPassword.touched;
+    return mismatch ? ERROR_TEXTS['password.mismatch'] : '';
+  }
+
+  private fieldError(control: AbstractControl): string {
+    return control.touched ? firstErrorText(control.errors) ?? '' : '';
   }
 }

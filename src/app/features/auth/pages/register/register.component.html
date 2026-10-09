@@ -1,55 +1,65 @@
     <div class="register-container">
       <app-card class="register-card">
         <div class="register-header">
-          <h1 class="register-title">Создать аккаунт</h1>
+          <h1 class="register-title" data-test="register-title">Создать аккаунт</h1>
           <p class="register-subtitle">Заполните форму для регистрации</p>
         </div>
 
-        <form (ngSubmit)="onSubmit()" class="register-form">
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="register-form">
           <app-input
             label="Имя"
             type="text"
             placeholder="Введите ваше имя"
-            [(ngModel)]="formData.name"
-            name="name"
-            [error]="errors.name"
+            formControlName="name"
+            [error]="nameError()"
+            data-test="name-input"
           />
 
           <app-input
             label="Email"
             type="email"
             placeholder="example@mail.com"
-            [(ngModel)]="formData.email"
-            name="email"
-            [error]="errors.email"
+            formControlName="email"
+            [error]="emailError()"
+            data-test="email-input"
           />
 
           <app-input
             label="Пароль"
             type="password"
-            placeholder="Минимум 6 символов"
-            [(ngModel)]="formData.password"
-            name="password"
-            [error]="errors.password"
+            placeholder="Минимум 8 символов"
+            formControlName="password"
+            [error]="passwordError()"
+            data-test="password-input"
           />
 
           <app-input
             label="Повторите пароль"
             type="password"
             placeholder="Повторите пароль"
-            [(ngModel)]="formData.confirmPassword"
-            name="confirmPassword"
-            [error]="errors.confirmPassword"
+            formControlName="confirmPassword"
+            [error]="confirmPasswordError()"
+            data-test="confirm-password-input"
           />
 
-          <app-button type="submit" size="lg" fullWidth>
-            Зарегистрироваться
+          <app-button
+            type="submit"
+            size="lg"
+            fullWidth
+            [disabled]="submitState.busy()"
+            data-test="register-submit"
+          >
+            @if (submitState.busy()) {
+              Отправка…
+            } @else {
+              Зарегистрироваться
+            }
           </app-button>
         </form>
 
         <p class="register-footer">
           Уже есть аккаунт?
-          <a href="/login" class="login-link">Войти</a>
+          <a routerLink="/login" class="login-link" data-test="login-link">Войти</a>
         </p>
       </app-card>
     </div>

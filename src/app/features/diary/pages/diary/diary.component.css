@@ -23,6 +23,11 @@
       color: var(--text-secondary);
       margin: 4px 0 0 0;
     }
+    .diary-status {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
     .date-input {
       background: var(--bg-input);
       border: 1px solid var(--border-color);

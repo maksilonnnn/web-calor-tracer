@@ -1,0 +1,47 @@
+    <div class="login-container">
+      <app-card class="login-card">
+        <div class="login-header">
+          <h1 class="login-title" data-test="login-title">Вход в аккаунт</h1>
+          <p class="login-subtitle">Введите email и пароль</p>
+        </div>
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
+          <app-input
+            label="Email"
+            type="email"
+            placeholder="example@mail.com"
+            formControlName="email"
+            [error]="emailError()"
+            data-test="email-input"
+          />
+
+          <app-input
+            label="Пароль"
+            type="password"
+            placeholder="Введите пароль"
+            formControlName="password"
+            [error]="passwordError()"
+            data-test="password-input"
+          />
+
+          <app-button
+            type="submit"
+            size="lg"
+            fullWidth
+            [disabled]="submitState.busy()"
+            data-test="login-submit"
+          >
+            @if (submitState.busy()) {
+              Отправка…
+            } @else {
+              Войти
+            }
+          </app-button>
+        </form>
+
+        <p class="login-footer">
+          Нет аккаунта?
+          <a routerLink="/register" class="register-link" data-test="register-link">Зарегистрироваться</a>
+        </p>
+      </app-card>
+    </div>

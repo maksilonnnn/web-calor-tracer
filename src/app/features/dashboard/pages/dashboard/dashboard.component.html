@@ -2,119 +2,126 @@
       <!-- Заголовок страницы -->
       <header class="page-header">
         <div class="header-text">
-          <h1 class="page-title">Доброе утро, Алексей 👋</h1>
+          <h1 class="page-title" data-test="dashboard-greeting">{{ greeting() }}</h1>
           <p class="page-subtitle">{{ today | date: 'd MMMM, EEEE' }}</p>
         </div>
-        <app-button size="lg" (click)="openAddFoodModal()">
+        <app-button size="lg" (click)="openAddFoodModal()" data-test="add-food-button">
           <span class="plus-icon">+</span>
           Добавить еду
         </app-button>
       </header>
 
-      <!-- Статистика: калории + макронутриенты -->
-      <section class="stats-grid">
-        <app-card class="calories-card">
-          <div class="calories-ring">
-            <svg viewBox="0 0 160 160" class="progress-ring">
-              <circle cx="80" cy="80" r="70" fill="none" stroke="var(--border-color)" stroke-width="11" />
-              <circle
-                cx="80" cy="80" r="70" fill="none"
-                stroke="var(--accent-primary)" stroke-width="11" stroke-linecap="round"
-                [attr.stroke-dasharray]="2 * Math.PI * 70"
-                [attr.stroke-dashoffset]="2 * Math.PI * 70 * (1 - caloriesPercentage / 100)"
-                class="progress-ring-fill"
-              />
-            </svg>
-            <div class="calories-percentage">
-              <span class="percentage-value">{{ caloriesPercentage }}%</span>
-              <span class="percentage-label">от цели</span>
-            </div>
-          </div>
-          <div class="calories-info">
-            <p class="calories-value">
-              {{ data.totalCalories }}
-              <span class="calories-unit">ккал</span>
-            </p>
-            <p class="calories-goal">из {{ settings.dailyCalories }} ккал</p>
-            <p class="calories-remaining">Осталось {{ remainingCalories }} ккал</p>
-          </div>
-        </app-card>
-
-        <app-card class="macros-card">
-          <h2 class="card-title">Макронутриенты</h2>
-          <div class="macros-list">
-            <app-progress-bar
-              label="Белки"
-              [value]="data.totalProtein"
-              [max]="settings.dailyProtein"
-              color="var(--accent-green)"
-            />
-            <app-progress-bar
-              label="Жиры"
-              [value]="data.totalFat"
-              [max]="settings.dailyFat"
-              color="var(--accent-orange)"
-            />
-            <app-progress-bar
-              label="Углеводы"
-              [value]="data.totalCarbs"
-              [max]="settings.dailyCarbs"
-              color="var(--accent-purple)"
-            />
-          </div>
-        </app-card>
-      </section>
-
-      <!-- Приёмы пищи -->
-      <section class="section">
-        <div class="section-header">
-          <h2 class="section-title">Приёмы пищи сегодня</h2>
-        </div>
-        <div class="meals-grid">
-          @for (meal of data.meals; track meal.type) {
-            <app-card class="meal-card">
-              <div class="meal-icon-wrap">{{ getMealIcon(meal.type) }}</div>
-              <p class="meal-name">{{ getMealLabel(meal.type) }}</p>
-              <p class="meal-count">{{ meal.itemsCount }} продуктов</p>
-              <p class="meal-calories">
-                {{ meal.calories }}
-                <span class="meal-unit">ккал</span>
-              </p>
-            </app-card>
-          }
-        </div>
-      </section>
-
-      <!-- Недавние продукты -->
-      <section class="section">
-        <div class="section-header">
-          <h2 class="section-title">Недавние продукты</h2>
-          <a routerLink="/diary" class="section-link">Все продукты</a>
-        </div>
-        <app-card class="recent-card">
-          <div class="recent-list">
-            @for (product of data.recentProducts; track product.id) {
-              <div class="recent-row">
-                <div class="row-left">
-                  <div class="product-icon">🍽️</div>
-                  <div class="product-details">
-                    <p class="product-name">{{ product.name }}</p>
-                    <p class="product-category">{{ product.category || 'Продукт' }}</p>
-                  </div>
-                </div>
-                <p class="product-calories">
-                  {{ product.calories }}
-                  <span class="product-unit">ккал</span>
-                </p>
+      @if (loading()) {
+        <p class="dashboard-status" data-test="dashboard-loading">Загрузка…</p>
+      } @else {
+        @if (data(); as d) {
+        <!-- Статистика: калории + макронутриенты -->
+        <section class="stats-grid">
+          <app-card class="calories-card">
+            <div class="calories-ring">
+              <svg viewBox="0 0 160 160" class="progress-ring">
+                <circle cx="80" cy="80" r="70" fill="none" stroke="var(--border-color)" stroke-width="11" />
+                <circle
+                  cx="80" cy="80" r="70" fill="none"
+                  stroke="var(--accent-primary)" stroke-width="11" stroke-linecap="round"
+                  [attr.stroke-dasharray]="2 * Math.PI * 70"
+                  [attr.stroke-dashoffset]="2 * Math.PI * 70 * (1 - caloriesPercentage() / 100)"
+                  class="progress-ring-fill"
+                />
+              </svg>
+              <div class="calories-percentage">
+                <span class="percentage-value">{{ caloriesPercentage() }}%</span>
+                <span class="percentage-label">от цели</span>
               </div>
+            </div>
+            <div class="calories-info">
+              <p class="calories-value">
+                {{ d.totalCalories }}
+                <span class="calories-unit">ккал</span>
+              </p>
+              <p class="calories-goal">из {{ d.goals.calories }} ккал</p>
+              <p class="calories-remaining">Осталось {{ remainingCalories() }} ккал</p>
+            </div>
+          </app-card>
+
+          <app-card class="macros-card">
+            <h2 class="card-title">Макронутриенты</h2>
+            <div class="macros-list">
+              <app-progress-bar
+                label="Белки"
+                [value]="d.totalProtein"
+                [max]="d.goals.protein"
+                color="var(--accent-green)"
+              />
+              <app-progress-bar
+                label="Жиры"
+                [value]="d.totalFat"
+                [max]="d.goals.fat"
+                color="var(--accent-orange)"
+              />
+              <app-progress-bar
+                label="Углеводы"
+                [value]="d.totalCarbs"
+                [max]="d.goals.carbs"
+                color="var(--accent-purple)"
+              />
+            </div>
+          </app-card>
+        </section>
+
+        <!-- Приёмы пищи -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Приёмы пищи сегодня</h2>
+          </div>
+          <div class="meals-grid">
+            @for (meal of d.meals; track meal.type) {
+              <app-card class="meal-card">
+                <div class="meal-icon-wrap">{{ mealIcons[meal.type] }}</div>
+                <p class="meal-name">{{ mealLabels[meal.type] }}</p>
+                <p class="meal-count">{{ meal.itemsCount }} продуктов</p>
+                <p class="meal-calories">
+                  {{ meal.calories }}
+                  <span class="meal-unit">ккал</span>
+                </p>
+              </app-card>
             }
           </div>
-        </app-card>
-      </section>
+        </section>
+
+        <!-- Недавние продукты -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Недавние продукты</h2>
+            <a routerLink="/diary" class="section-link">Все продукты</a>
+          </div>
+          <app-card class="recent-card">
+            <div class="recent-list">
+              @for (product of d.recentProducts; track product.id) {
+                <div class="recent-row">
+                  <div class="row-left">
+                    <div class="product-icon">🍽️</div>
+                    <div class="product-details">
+                      <p class="product-name">{{ product.name }}</p>
+                      <p class="product-category">{{ product.category || 'Продукт' }}</p>
+                    </div>
+                  </div>
+                  <p class="product-calories">
+                    {{ product.calories }}
+                    <span class="product-unit">ккал</span>
+                  </p>
+                </div>
+              }
+            </div>
+          </app-card>
+        </section>
+        }
+      }
     </div>
 
-    <!-- Модальное окно добавления еды (UI-прототип) -->
+    <!-- Модальное окно добавления еды -->
     <app-add-food-modal
-      [isOpen]="isAddFoodModalOpen"
+      [isOpen]="isAddFoodModalOpen()"
       (close)="closeAddFoodModal()"
+      (added)="onFoodAdded()"
     />

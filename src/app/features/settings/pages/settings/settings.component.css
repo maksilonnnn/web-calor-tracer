@@ -17,6 +17,11 @@
       color: var(--text-secondary);
       margin: 4px 0 0 0;
     }
+    .settings-status {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
 
     /* Колонка карточек */
     .settings-column {
@@ -61,6 +66,17 @@
       border: 1px solid var(--border-color);
       border-radius: 10px;
     }
+    .setting-item + .setting-item {
+      margin-top: 12px;
+    }
+    .setting-info {
+      min-width: 0;
+    }
+    .unit-switch {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
     .setting-name {
       font-size: 14px;
       font-weight: 600;
@@ -77,6 +93,7 @@
     .card-actions {
       display: flex;
       gap: 12px;
+      margin-top: 20px;
     }
 
     /* Опасная зона */

@@ -1,9 +1,16 @@
-import { Component, Input, Output, EventEmitter, forwardRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  forwardRef,
+  input,
+  signal,
+  booleanAttribute,
+} from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
   selector: 'app-input',
-  standalone: true,
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
@@ -12,31 +19,40 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
     },
   ],
   templateUrl: './input.component.html',
-  styleUrl: './input.component.css'
+  styleUrl: './input.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class InputComponent implements ControlValueAccessor {
-  @Input() label = '';
-  @Input() type = 'text';
-  @Input() placeholder = '';
-  @Input() value = '';
-  @Input() error = '';
+  readonly label = input('');
+  readonly type = input('text');
+  readonly placeholder = input('');
+  readonly error = input('');
   /** Единица измерения справа внутри поля: «г», «ккал» и т.д. */
-  @Input() unit = '';
-  @Input({ transform: (v: unknown) => Boolean(v) }) disabled = false;
-  @Output() valueChange = new EventEmitter<string>();
+  readonly unit = input('');
+  readonly disabled = input(false, { transform: booleanAttribute });
 
-  onChange: (value: string) => void = () => {};
-  onTouched: () => void = () => {};
+  /** Текущее значение контрола (для CVA — источник отображения поля). */
+  protected readonly value = signal('');
+  /** Состояние disabled из формы (setDisabledState) поверх input disabled. */
+  private readonly formDisabled = signal(false);
 
-  onInput(event: Event) {
+  protected readonly isDisabled = computed(() => this.disabled() || this.formDisabled());
+
+  private onChange: (value: string) => void = () => {};
+  private onTouched: () => void = () => {};
+
+  protected onInput(event: Event): void {
     const target = event.target as HTMLInputElement;
-    this.value = target.value;
-    this.valueChange.emit(target.value);
+    this.value.set(target.value);
     this.onChange(target.value);
   }
 
+  protected onBlur(): void {
+    this.onTouched();
+  }
+
   writeValue(value: string | null | undefined): void {
-    this.value = value ?? '';
+    this.value.set(value ?? '');
   }
 
   registerOnChange(fn: (value: string) => void): void {
@@ -48,6 +64,6 @@ export class InputComponent implements ControlValueAccessor {
   }
 
   setDisabledState(isDisabled: boolean): void {
-    this.disabled = isDisabled;
+    this.formDisabled.set(isDisabled);
   }
 }

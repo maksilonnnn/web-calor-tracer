@@ -1,8 +1,8 @@
     <button
       type="button"
       class="toggle-switch"
-      [class.active]="checked"
+      [class.active]="checked()"
       role="switch"
-      [attr.aria-checked]="checked"
-      (click)="onChange.emit(!checked)"
+      [attr.aria-checked]="checked()"
+      (click)="toggled.emit(!checked())"
     ></button>

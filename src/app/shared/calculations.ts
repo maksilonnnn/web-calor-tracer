@@ -32,23 +32,3 @@ export function sumNutrition(items: MealItem[]): {
     { calories: 0, protein: 0, fat: 0, carbs: 0 }
   );
 }
-
-export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (dateString === today.toISOString().split('T')[0]) {
-    return 'Сегодня';
-  }
-  if (dateString === yesterday.toISOString().split('T')[0]) {
-    return 'Вчера';
-  }
-
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    weekday: 'long',
-  });
-}

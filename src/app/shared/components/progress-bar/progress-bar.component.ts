@@ -1,20 +1,23 @@
-import { Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, booleanAttribute } from '@angular/core';
 
 @Component({
   selector: 'app-progress-bar',
-  standalone: true,
   templateUrl: './progress-bar.component.html',
-  styleUrl: './progress-bar.component.css'
+  styleUrl: './progress-bar.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProgressBarComponent {
-  @Input() value = 0;
-  @Input() max = 100;
-  @Input() color = '#3b82f6';
-  @Input() label = '';
-  @Input({ transform: (v: unknown) => Boolean(v) }) showPercentage = true;
+  readonly value = input(0);
+  readonly max = input(100);
+  readonly color = input('#3b82f6');
+  readonly label = input('');
+  readonly showPercentage = input(true, { transform: booleanAttribute });
 
-  get percentage(): number {
-    if (this.max === 0) return 0;
-    return Math.min(Math.round((this.value / this.max) * 100), 100);
-  }
+  protected readonly percentage = computed(() => {
+    const max = this.max();
+    if (max === 0) {
+      return 0;
+    }
+    return Math.min(Math.round((this.value() / max) * 100), 100);
+  });
 }

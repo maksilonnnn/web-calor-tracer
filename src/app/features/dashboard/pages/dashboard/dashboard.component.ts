@@ -1,49 +1,115 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+/**
+ * Дашборд (/) — агрегат дня из DashboardService: итоги, разбивка по приёмам
+ * пищи, недавние продукты и дневные нормы считает мок. Приветствие и
+ * подпись даты формируются на странице. Добавление еды — через модалку;
+ * после успеха итоги перезагружаются.
+ */
+import { DatePipe } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
+
+import { AuthService } from '../../../../core/services/auth.service';
+import { DashboardService } from '../../../../core/services/dashboard.service';
+import { toApiError } from '../../../../shared/api-error';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { CardComponent } from '../../../../shared/components/card/card.component';
 import { ProgressBarComponent } from '../../../../shared/components/progress-bar/progress-bar.component';
+import { todayIso } from '../../../../shared/dates';
+import { DashboardData, MEAL_TYPE_ICONS, MEAL_TYPE_LABELS } from '../../../../shared/models';
+import { NotificationService } from '../../../../shared/notifications/notification-service';
 import { AddFoodModalComponent } from '../../components/add-food-modal/add-food-modal.component';
-import { mockDashboardData, mockSettings } from '../../../../shared/utils/mock-data';
-import { MEAL_TYPE_LABELS, MEAL_TYPE_ICONS } from '../../../../shared/models';
 
 @Component({
   selector: 'app-dashboard',
-  standalone: true,
-  imports: [CommonModule, RouterLink, ButtonComponent, CardComponent, ProgressBarComponent, AddFoodModalComponent],
+  imports: [
+    DatePipe,
+    RouterLink,
+    ButtonComponent,
+    CardComponent,
+    ProgressBarComponent,
+    AddFoodModalComponent,
+  ],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.css'
+  styleUrl: './dashboard.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
+  private readonly dashboard = inject(DashboardService);
+  private readonly auth = inject(AuthService);
+  private readonly notifications = inject(NotificationService);
+
   protected readonly Math = Math;
-  data = mockDashboardData;
-  settings = mockSettings;
-  today = new Date();
+  protected readonly mealLabels = MEAL_TYPE_LABELS;
+  protected readonly mealIcons = MEAL_TYPE_ICONS;
 
-  isAddFoodModalOpen = false;
+  protected readonly data = signal<DashboardData | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly isAddFoodModalOpen = signal(false);
+  protected readonly today = new Date();
 
-  openAddFoodModal(): void {
-    this.isAddFoodModalOpen = true;
+  protected readonly greeting = computed(() => {
+    const name = this.auth.currentUser()?.name ?? '';
+    return `${this.greetingPrefix(new Date().getHours())}, ${name} 👋`;
+  });
+
+  protected readonly caloriesPercentage = computed(() => {
+    const data = this.data();
+    if (data === null || data.goals.calories === 0) {
+      return 0;
+    }
+    return Math.round((data.totalCalories / data.goals.calories) * 100);
+  });
+
+  protected readonly remainingCalories = computed(() => {
+    const data = this.data();
+    return data === null ? 0 : data.goals.calories - data.totalCalories;
+  });
+
+  async ngOnInit(): Promise<void> {
+    await this.load();
   }
 
-  closeAddFoodModal(): void {
-    this.isAddFoodModalOpen = false;
+  protected openAddFoodModal(): void {
+    this.isAddFoodModalOpen.set(true);
   }
 
-  get caloriesPercentage(): number {
-    return Math.round((this.data.totalCalories / this.settings.dailyCalories) * 100);
+  protected closeAddFoodModal(): void {
+    this.isAddFoodModalOpen.set(false);
   }
 
-  get remainingCalories(): number {
-    return this.settings.dailyCalories - this.data.totalCalories;
+  protected onFoodAdded(): void {
+    this.isAddFoodModalOpen.set(false);
+    void this.load();
   }
 
-  getMealLabel(type: string): string {
-    return MEAL_TYPE_LABELS[type as keyof typeof MEAL_TYPE_LABELS] || type;
+  private async load(): Promise<void> {
+    this.loading.set(true);
+    try {
+      this.data.set(await this.dashboard.getDay(todayIso()));
+    } catch (error) {
+      this.notifications.notifyError(toApiError(error).body.message);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
-  getMealIcon(type: string): string {
-    return MEAL_TYPE_ICONS[type as keyof typeof MEAL_TYPE_ICONS] || '🍽️';
+  private greetingPrefix(hour: number): string {
+    if (hour >= 5 && hour < 12) {
+      return 'Доброе утро';
+    }
+    if (hour >= 12 && hour < 18) {
+      return 'Добрый день';
+    }
+    if (hour >= 18 && hour < 23) {
+      return 'Добрый вечер';
+    }
+    return 'Доброй ночи';
   }
 }
