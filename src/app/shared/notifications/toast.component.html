@@ -1,0 +1,23 @@
+@if (message(); as toast) {
+  <div
+    class="toast"
+    [class.toast--success]="toast.severity === 'success'"
+    [class.toast--error]="toast.severity === 'error'"
+    role="status"
+    data-test="toast"
+  >
+    <span class="toast-icon" aria-hidden="true">
+      {{ toast.severity === 'success' ? '✓' : '!' }}
+    </span>
+    <span class="toast-text" data-test="toast-text">{{ toast.text }}</span>
+    <button
+      type="button"
+      class="toast-close"
+      aria-label="Закрыть"
+      (click)="dismiss()"
+      data-test="toast-close"
+    >
+      ✕
+    </button>
+  </div>
+}

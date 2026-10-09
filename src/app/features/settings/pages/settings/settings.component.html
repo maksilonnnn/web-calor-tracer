@@ -1,0 +1,197 @@
+    <div class="settings-page">
+      <header class="page-header">
+        <div class="header-text">
+          <h1 class="page-title">Настройки</h1>
+          <p class="page-subtitle">Управление профилем и приложением</p>
+        </div>
+      </header>
+
+      @if (loading()) {
+        <p class="settings-status" data-test="settings-loading">Загрузка…</p>
+      } @else {
+        <div class="settings-column">
+          <!-- Профиль -->
+          <app-card class="settings-card">
+            <div class="card-header">
+              <h2 class="card-title">Профиль</h2>
+              <p class="card-description">Эти данные отображаются в вашем профиле</p>
+            </div>
+            <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+              <div class="form-grid">
+                <app-input
+                  label="Имя"
+                  type="text"
+                  formControlName="name"
+                  [error]="nameError()"
+                  data-test="profile-name-input"
+                />
+                <app-input
+                  label="Email"
+                  type="email"
+                  formControlName="email"
+                  [error]="emailError()"
+                  data-test="profile-email-input"
+                />
+              </div>
+              <div class="card-actions">
+                <app-button
+                  type="submit"
+                  [disabled]="saveProfileState.busy()"
+                  data-test="profile-save"
+                >
+                  Сохранить изменения
+                </app-button>
+              </div>
+            </form>
+          </app-card>
+
+          <!-- Отображение -->
+          <app-card class="settings-card">
+            <div class="card-header">
+              <h2 class="card-title">Отображение</h2>
+              <p class="card-description">Настройки вида данных в приложении</p>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <p class="setting-name">Единица веса</p>
+                <p class="setting-description">В каких единицах показывать количество продуктов</p>
+              </div>
+              <div class="unit-switch">
+                <app-button
+                  size="sm"
+                  [variant]="unit() === 'g' ? 'primary' : 'secondary'"
+                  (click)="setWeightUnit('g')"
+                  data-test="weight-unit-g"
+                >
+                  г
+                </app-button>
+                <app-button
+                  size="sm"
+                  [variant]="unit() === 'kg' ? 'primary' : 'secondary'"
+                  (click)="setWeightUnit('kg')"
+                  data-test="weight-unit-kg"
+                >
+                  кг
+                </app-button>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <div class="setting-info">
+                <p class="setting-name">Уведомления</p>
+                <p class="setting-description">Показывать уведомления о действиях</p>
+              </div>
+              <app-toggle
+                [checked]="notificationsEnabled()"
+                (toggled)="setNotificationsEnabled($event)"
+                data-test="notifications-toggle"
+              />
+            </div>
+          </app-card>
+
+          <!-- Безопасность -->
+          <app-card class="settings-card">
+            <div class="card-header">
+              <h2 class="card-title">Безопасность</h2>
+              <p class="card-description">Управление паролем и доступом к аккаунту</p>
+            </div>
+            <div class="card-actions">
+              <app-button
+                variant="secondary"
+                (click)="openPasswordModal()"
+                data-test="open-password-modal"
+              >
+                Сменить пароль
+              </app-button>
+            </div>
+          </app-card>
+
+          <!-- Опасная зона -->
+          <app-card class="settings-card danger-card">
+            <div class="card-header">
+              <h2 class="card-title danger-title">Опасная зона</h2>
+              <p class="card-description">
+                Удаление аккаунта приведёт к потере всех данных без возможности восстановления.
+              </p>
+            </div>
+            <div class="card-actions">
+              <app-button
+                variant="danger"
+                (click)="openDeleteModal()"
+                data-test="open-delete-modal"
+              >
+                Удалить аккаунт
+              </app-button>
+            </div>
+          </app-card>
+        </div>
+      }
+
+      <!-- Модальное окно смены пароля -->
+      <app-modal
+        [isOpen]="passwordModalOpen()"
+        title="Сменить пароль"
+        (close)="closePasswordModal()"
+      >
+        <form [formGroup]="passwordForm" (ngSubmit)="changePassword()" class="modal-body">
+          <app-input
+            label="Текущий пароль"
+            type="password"
+            formControlName="currentPassword"
+            [error]="currentPasswordError()"
+            data-test="current-password-input"
+          />
+          <app-input
+            label="Новый пароль"
+            type="password"
+            formControlName="password"
+            [error]="newPasswordError()"
+            data-test="new-password-input"
+          />
+          <app-input
+            label="Повторите новый пароль"
+            type="password"
+            formControlName="confirmPassword"
+            [error]="confirmPasswordError()"
+            data-test="repeat-password-input"
+          />
+          <div class="modal-actions">
+            <app-button variant="secondary" fullWidth (click)="closePasswordModal()">
+              Отмена
+            </app-button>
+            <app-button
+              type="submit"
+              fullWidth
+              [disabled]="changePasswordState.busy()"
+              data-test="password-submit"
+            >
+              Сменить
+            </app-button>
+          </div>
+        </form>
+      </app-modal>
+
+      <!-- Модальное окно удаления аккаунта -->
+      <app-modal [isOpen]="deleteModalOpen()" title="Удалить аккаунт?" (close)="closeDeleteModal()">
+        <div class="modal-body">
+          <p class="modal-text">
+            Это действие необратимо. Все ваши данные будут удалены.
+          </p>
+          <div class="modal-actions">
+            <app-button variant="secondary" fullWidth (click)="closeDeleteModal()">
+              Отмена
+            </app-button>
+            <app-button
+              variant="danger"
+              fullWidth
+              [disabled]="deleteState.busy()"
+              (click)="deleteAccount()"
+              data-test="delete-confirm"
+            >
+              Удалить
+            </app-button>
+          </div>
+        </div>
+      </app-modal>
+    </div>

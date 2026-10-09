@@ -1,0 +1,73 @@
+    <aside class="sidebar">
+      <!-- Логотип -->
+      <div class="sidebar-header">
+        <div class="logo-mark">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21c-4.5-2.5-7-6-7-10a7 7 0 0 1 14 0c0 4-2.5 7.5-7 10z" />
+            <path d="M12 3v8" />
+          </svg>
+        </div>
+        <span class="logo-title">CalorieTracker</span>
+      </div>
+
+      <!-- Навигация -->
+      <nav class="sidebar-nav">
+        <p class="nav-label">Меню</p>
+        <ul class="nav-list">
+          <li>
+            <a
+              routerLink="/"
+              routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="nav-link"
+              data-test="nav-dashboard"
+            >
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 10.5 12 3l9 7.5" />
+                <path d="M5.5 9.5V20a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1V9.5" />
+              </svg>
+              <span>Главная</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/diary" routerLinkActive="active" class="nav-link" data-test="nav-diary">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+                <path d="M8 3v18" />
+                <path d="M12 8h4" />
+                <path d="M12 12h4" />
+              </svg>
+              <span>Дневник</span>
+            </a>
+          </li>
+          <li>
+            <a routerLink="/settings" routerLinkActive="active" class="nav-link" data-test="nav-settings">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 7h10" />
+                <path d="M18 7h2" />
+                <circle cx="16" cy="7" r="2" />
+                <path d="M4 17h6" />
+                <path d="M14 17h6" />
+                <circle cx="12" cy="17" r="2" />
+              </svg>
+              <span>Настройки</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <!-- Низ sidebar: тема + профиль -->
+      <div class="sidebar-footer">
+        <app-theme-toggle />
+        <div class="user-info">
+          <div class="user-avatar" data-test="user-initial">{{ userInitial() }}</div>
+          <div class="user-details">
+            <p class="user-name" data-test="user-name">{{ user()?.name }}</p>
+            <p class="user-email" data-test="user-email">{{ user()?.email }}</p>
+          </div>
+        </div>
+        <button type="button" class="logout-btn" (click)="logout()" data-test="logout-button">
+          Выйти
+        </button>
+      </div>
+    </aside>
