@@ -6,7 +6,7 @@ import { CardComponent } from './card.component';
 @Component({
   standalone: true,
   imports: [CardComponent],
-  template: `<app-card class="my-card"><p class="projected">Содержимое</p></app-card>`,
+  templateUrl: './card-host.component.html',
 })
 class HostComponent {}
 

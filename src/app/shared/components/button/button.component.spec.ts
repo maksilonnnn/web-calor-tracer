@@ -6,7 +6,7 @@ import { ButtonComponent } from './button.component';
 @Component({
   standalone: true,
   imports: [ButtonComponent],
-  template: `<app-button variant="danger" size="lg" type="submit" fullWidth disabled>Текст</app-button>`,
+  templateUrl: './button-host.component.html',
 })
 class HostComponent {}
 
