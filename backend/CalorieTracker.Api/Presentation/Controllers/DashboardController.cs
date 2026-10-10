@@ -19,6 +19,9 @@ public sealed class DashboardController : ApiControllerBase
     [ProducesResponseType(typeof(DashboardDataDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<DashboardDataDto> GetDay([FromQuery] string? date) =>
-        Ok(DtoMapper.ToDto(_dashboard.GetDay(CurrentUserId, DateParser.Parse(date))));
+    public async Task<ActionResult<DashboardDataDto>> GetDay(
+        [FromQuery] string? date,
+        CancellationToken cancellationToken) =>
+        Ok(DtoMapper.ToDto(
+            await _dashboard.GetDayAsync(CurrentUserId, DateParser.Parse(date), cancellationToken)));
 }

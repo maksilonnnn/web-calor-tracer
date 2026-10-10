@@ -2,6 +2,7 @@
       type="button"
       class="toggle-switch"
       [class.active]="checked()"
+      [disabled]="disabled()"
       role="switch"
       [attr.aria-checked]="checked()"
       (click)="toggled.emit(!checked())"

@@ -10,42 +10,50 @@ public sealed class InMemorySettingsRepository : ISettingsRepository
 
     public InMemorySettingsRepository(InMemoryDatabase db) => _db = db;
 
-    public UserSettings? Find(Guid userId)
+    public Task<UserSettings?> FindAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Settings.GetValueOrDefault(userId);
+            return Task.FromResult(_db.Settings.GetValueOrDefault(userId));
         }
     }
 
-    public UserSettings GetOrCreate(Guid userId)
+    public Task<UserSettings> GetOrCreateAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             if (_db.Settings.TryGetValue(userId, out var existing))
             {
-                return existing;
+                return Task.FromResult(existing);
             }
 
             var created = UserSettings.CreateDefault(userId);
             _db.Settings[userId] = created;
-            return created;
+            return Task.FromResult(created);
         }
     }
 
-    public void Save(UserSettings settings)
+    public Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Settings[settings.UserId] = settings;
         }
+
+        return Task.CompletedTask;
     }
 
-    public void Remove(Guid userId)
+    public Task RemoveAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Settings.Remove(userId);
         }
+
+        return Task.CompletedTask;
     }
 }

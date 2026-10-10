@@ -18,22 +18,24 @@ public sealed class SettingsController : ApiControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(SettingsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<SettingsDto> Get() =>
-        Ok(DtoMapper.ToDto(_settings.Get(CurrentUserId)));
+    public async Task<ActionResult<SettingsDto>> Get(CancellationToken cancellationToken) =>
+        Ok(DtoMapper.ToDto(await _settings.GetAsync(CurrentUserId, cancellationToken)));
 
     /// <summary>Частичное обновление настроек → актуальные значения.</summary>
     [HttpPut]
     [ProducesResponseType(typeof(SettingsDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<SettingsDto> Update([FromBody] SettingsUpdateRequest? request)
+    public async Task<ActionResult<SettingsDto>> Update(
+        [FromBody] SettingsUpdateRequest? request,
+        CancellationToken cancellationToken)
     {
         var body = Body(request);
-        var updated = _settings.Update(CurrentUserId, new SettingsUpdateCommand
+        var updated = await _settings.UpdateAsync(CurrentUserId, new SettingsUpdateCommand
         {
             WeightUnit = body.WeightUnit,
             NotificationsEnabled = body.NotificationsEnabled,
-        });
+        }, cancellationToken);
         return Ok(DtoMapper.ToDto(updated));
     }
 }

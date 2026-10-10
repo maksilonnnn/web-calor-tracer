@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
 import { WritableSignal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { DEFAULT_SETTINGS, Settings, UserDto, WeightUnit } from '../../../../shared/models';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -93,6 +93,27 @@ describe('SettingsComponent', () => {
     expect(component.profileForm.value).toEqual({ name: 'Алексей', email: 'alex@example.com' });
     expect(component.unit()).toBe('kg');
     expect(component.notificationsEnabled()).toBeFalse();
+  });
+
+  it('блок загрузки показывает спиннер до ответа и исчезает после', async () => {
+    const profile$ = new Subject<UserDto>();
+    const settings$ = new Subject<Settings>();
+    profile.get.and.returnValue(profile$.asObservable());
+    settings.get.and.returnValue(settings$.asObservable());
+
+    fixture.detectChanges();
+    const loadingBlock = fixture.nativeElement.querySelector('[data-test="settings-loading"]');
+    expect(loadingBlock).not.toBeNull();
+    expect(loadingBlock?.querySelector('app-spinner')).not.toBeNull();
+
+    profile$.next(ME);
+    profile$.complete();
+    settings$.next({ ...SAVED });
+    settings$.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-test="settings-loading"]')).toBeNull();
   });
 
   it('сохранение профиля: update, loadMe и уведомление «Сохранено»', async () => {

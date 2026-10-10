@@ -33,16 +33,18 @@ public sealed class AuthController : ApiControllerBase
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
-    public ActionResult<UserDto> Register([FromBody] RegisterRequest? request)
+    public async Task<ActionResult<UserDto>> Register(
+        [FromBody] RegisterRequest? request,
+        CancellationToken cancellationToken)
     {
         var body = Body(request);
-        var result = _auth.Register(new RegisterCommand
+        var result = await _auth.RegisterAsync(new RegisterCommand
         {
             Name = body.Name ?? string.Empty,
             Email = body.Email ?? string.Empty,
             Password = body.Password ?? string.Empty,
             ConfirmPassword = body.ConfirmPassword ?? string.Empty,
-        });
+        }, cancellationToken);
         AuthCookie.Write(Response, _options, _environment, result.Token);
         return StatusCode(StatusCodes.Status201Created, DtoMapper.ToDto(result.User));
     }
@@ -52,14 +54,16 @@ public sealed class AuthController : ApiControllerBase
     [AllowAnonymous]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<UserDto> Login([FromBody] LoginRequest? request)
+    public async Task<ActionResult<UserDto>> Login(
+        [FromBody] LoginRequest? request,
+        CancellationToken cancellationToken)
     {
         var body = Body(request);
-        var result = _auth.Login(new LoginCommand
+        var result = await _auth.LoginAsync(new LoginCommand
         {
             Email = body.Email ?? string.Empty,
             Password = body.Password ?? string.Empty,
-        });
+        }, cancellationToken);
         AuthCookie.Write(Response, _options, _environment, result.Token);
         return Ok(DtoMapper.ToDto(result.User));
     }
@@ -78,5 +82,6 @@ public sealed class AuthController : ApiControllerBase
     [HttpGet("me")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<UserDto> Me() => Ok(DtoMapper.ToDto(_auth.GetCurrentUser(CurrentUserId)));
+    public async Task<ActionResult<UserDto>> Me(CancellationToken cancellationToken) =>
+        Ok(DtoMapper.ToDto(await _auth.GetCurrentUserAsync(CurrentUserId, cancellationToken)));
 }

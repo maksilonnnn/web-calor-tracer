@@ -65,4 +65,27 @@ describe('ButtonComponent', () => {
     expect(inner.classList.contains('full-width')).toBeTrue();
     expect(inner.disabled).toBeTrue();
   });
+
+  it('loading=false: спиннер отсутствует, aria-busy не задан', () => {
+    expect(button().querySelector('app-spinner')).toBeNull();
+    expect(button().getAttribute('aria-busy')).toBeNull();
+    expect(button().disabled).toBeFalse();
+  });
+
+  it('loading=true: спиннер перед текстом, aria-busy=true, кнопка заблокирована', () => {
+    fixture.componentRef.setInput('loading', true);
+    fixture.detectChanges();
+
+    expect(button().querySelector('app-spinner')).not.toBeNull();
+    expect(button().getAttribute('aria-busy')).toBe('true');
+    expect(button().disabled).toBeTrue();
+  });
+
+  it('loading=true блокирует клики (кнопка disabled)', () => {
+    fixture.componentRef.setInput('loading', true);
+    fixture.detectChanges();
+
+    // Клик по disabled-кнопке браузером не инициируется.
+    expect(button().disabled).toBeTrue();
+  });
 });

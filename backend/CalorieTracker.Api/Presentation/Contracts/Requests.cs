@@ -50,10 +50,15 @@ public sealed class AddFoodRequest
     public double Quantity { get; init; }
 }
 
-/// <summary>Тело запроса diary.updateQuantity.</summary>
-public sealed class UpdateQuantityRequest
+/// <summary>
+/// Тело запроса diary.updateItem: количество и опционально новые данные
+/// продукта (на 100 г). Без product меняется только количество.
+/// </summary>
+public sealed class UpdateItemRequest
 {
     public double Quantity { get; init; }
+
+    public FoodInputRequest? Product { get; init; }
 }
 
 /// <summary>Тело запроса частичного обновления настроек.</summary>

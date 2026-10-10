@@ -1,8 +1,9 @@
 /**
  * Дневник питания (/diary): загрузка дня из DiaryService по выбранной дате,
  * итоги дня считаются по позициям. «Изменить» и «Удалить» работают через
- * сервис и обновляют день/итоги; количество вводится в текущих единицах
- * отображения и перед отправкой переводится в граммы.
+ * сервис и обновляют день/итоги. В модалке редактирования меняются название,
+ * количество (в текущих единицах, перед отправкой — в граммах) и пищевая
+ * ценность продукта на 100 г.
  */
 import { DecimalPipe } from '@angular/common';
 import {
@@ -23,6 +24,7 @@ import { ButtonComponent } from '../../../../shared/components/button/button.com
 import { CardComponent } from '../../../../shared/components/card/card.component';
 import { InputComponent } from '../../../../shared/components/input/input.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { SpinnerComponent } from '../../../../shared/components/spinner/spinner.component';
 import { calculateNutrition, sumNutrition } from '../../../../shared/calculations';
 import { formatDateLabel, todayIso } from '../../../../shared/dates';
 import { submitting } from '../../../../shared/loading/submitting';
@@ -38,8 +40,11 @@ import { formatQuantity, toDisplayQuantity, toGrams, weightUnitLabel } from '../
 import { INVALID_FORM_MESSAGE } from '../../../../shared/validation/error-texts';
 import {
   firstErrorText,
+  nonNegativeNumber,
   positiveNumber,
+  productName,
   requiredTrim,
+  trimFormValues,
 } from '../../../../shared/validation/validators';
 
 /** Значение контрола как конечное число (иначе 0). */
@@ -57,6 +62,7 @@ function toNumber(value: number | string): number {
     ButtonComponent,
     ModalComponent,
     InputComponent,
+    SpinnerComponent,
   ],
   templateUrl: './diary.component.html',
   styleUrl: './diary.component.css',
@@ -79,11 +85,42 @@ export class DiaryComponent implements OnInit {
   protected readonly editItem = signal<MealItem | null>(null);
   protected readonly deletingItem = signal<MealItem | null>(null);
 
+  /** Категории продукта — те же, что в модалке добавления еды. */
+  protected readonly categories: readonly string[] = [
+    'Мясо',
+    'Крупы',
+    'Яйца',
+    'Выпечка',
+    'Молочные',
+    'Фрукты',
+    'Овощи',
+    'Напитки',
+    'Другое',
+  ];
+
   protected readonly editForm = new FormGroup({
+    name: new FormControl('', { nonNullable: true, validators: [requiredTrim(), productName()] }),
     quantity: new FormControl<number | string>(0, {
       nonNullable: true,
       validators: [requiredTrim(), positiveNumber()],
     }),
+    calories: new FormControl<number | string>(0, {
+      nonNullable: true,
+      validators: [nonNegativeNumber()],
+    }),
+    protein: new FormControl<number | string>(0, {
+      nonNullable: true,
+      validators: [nonNegativeNumber()],
+    }),
+    fat: new FormControl<number | string>(0, {
+      nonNullable: true,
+      validators: [nonNegativeNumber()],
+    }),
+    carbs: new FormControl<number | string>(0, {
+      nonNullable: true,
+      validators: [nonNegativeNumber()],
+    }),
+    category: new FormControl('Мясо', { nonNullable: true }),
   });
 
   protected readonly editState = submitting();
@@ -129,16 +166,50 @@ export class DiaryComponent implements OnInit {
 
   protected openEditModal(item: MealItem): void {
     this.editItem.set(item);
-    this.editForm.controls.quantity.setValue(toDisplayQuantity(item.quantity, this.unit()));
-    this.editForm.controls.quantity.markAsUntouched();
+    this.editForm.setValue({
+      name: item.product.name,
+      quantity: toDisplayQuantity(item.quantity, this.unit()),
+      calories: item.product.calories,
+      protein: item.product.protein,
+      fat: item.product.fat,
+      carbs: item.product.carbs,
+      category: item.product.category ?? 'Мясо',
+    });
+    this.editForm.markAsUntouched();
   }
 
   protected closeEditModal(): void {
     this.editItem.set(null);
   }
 
+  protected nameError(): string {
+    return this.error('name');
+  }
+
   protected quantityError(): string {
-    const control = this.editForm.controls.quantity;
+    return this.error('quantity');
+  }
+
+  protected caloriesError(): string {
+    return this.error('calories');
+  }
+
+  protected proteinError(): string {
+    return this.error('protein');
+  }
+
+  protected fatError(): string {
+    return this.error('fat');
+  }
+
+  protected carbsError(): string {
+    return this.error('carbs');
+  }
+
+  private error(
+    name: 'name' | 'quantity' | 'calories' | 'protein' | 'fat' | 'carbs',
+  ): string {
+    const control = this.editForm.controls[name];
     return control.touched ? firstErrorText(control.errors) ?? '' : '';
   }
 
@@ -152,10 +223,26 @@ export class DiaryComponent implements OnInit {
       this.notifications.notifyError(INVALID_FORM_MESSAGE);
       return;
     }
-    const quantity = toGrams(toNumber(this.editForm.controls.quantity.value), this.unit());
+    trimFormValues(this.editForm);
+    const value = this.editForm.getRawValue();
+    const quantity = toGrams(toNumber(value.quantity), this.unit());
     await this.editState.run(async () => {
       try {
-        this.entry.set(await firstValueFrom(this.diary.updateQuantity(item.id, quantity)));
+        this.entry.set(
+          await firstValueFrom(
+            this.diary.updateItem(item.id, {
+              quantity,
+              product: {
+                name: value.name,
+                calories: toNumber(value.calories),
+                protein: toNumber(value.protein),
+                fat: toNumber(value.fat),
+                carbs: toNumber(value.carbs),
+                category: value.category,
+              },
+            }),
+          ),
+        );
         this.notifications.notifySuccess('Сохранено');
         this.closeEditModal();
       } catch (error) {

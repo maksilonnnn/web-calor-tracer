@@ -88,6 +88,25 @@ describe('DashboardComponent', () => {
     expect(component.data()?.totalCalories).toBe(3000);
   });
 
+  it('блок загрузки показывает спиннер до ответа и исчезает после', async () => {
+    const day = new Subject<DashboardData>();
+    dashboard.getDay.and.returnValue(day.asObservable());
+
+    fixture.detectChanges();
+    const loadingBlock = fixture.nativeElement.querySelector(
+      '[data-test="dashboard-loading"]',
+    );
+    expect(loadingBlock).not.toBeNull();
+    expect(loadingBlock?.querySelector('app-spinner')).not.toBeNull();
+
+    day.next(DATA);
+    day.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-test="dashboard-loading"]')).toBeNull();
+  });
+
   it('приветствие содержит имя пользователя, данные и нормы отрисованы', async () => {
     await init();
 

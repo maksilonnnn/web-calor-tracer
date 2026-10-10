@@ -7,6 +7,9 @@ namespace CalorieTracker.Api.Domain.Nutrition;
 /// Расчёт пищевой ценности по количеству. Повторяет округление клиентского
 /// shared/calculations.ts: калории — до целого, БЖУ — до 0,1 (round-half-up;
 /// для неотрицательных значений совпадает с Math.round).
+///
+/// Порции и суммы — вычисленные значения, поэтому верхняя граница «на 100 г»
+/// (10 000) к ним не применяется: порция или итог дня законно превышают её.
 /// </summary>
 public static class NutritionCalculator
 {
@@ -14,7 +17,7 @@ public static class NutritionCalculator
     public static NutritionFacts Calculate(Product product, double quantityGrams)
     {
         var multiplier = quantityGrams / 100.0;
-        return NutritionFacts.Create(
+        return NutritionFacts.CreateTotal(
             RoundToInt(product.Calories * multiplier),
             RoundToTenth(product.Protein * multiplier),
             RoundToTenth(product.Fat * multiplier),
@@ -38,7 +41,7 @@ public static class NutritionCalculator
             carbs += value.Carbs;
         }
 
-        return NutritionFacts.Create(calories, protein, fat, carbs);
+        return NutritionFacts.CreateTotal(calories, protein, fat, carbs);
     }
 
     private static double RoundToInt(double value) =>

@@ -69,13 +69,21 @@ describe('DiaryService — сервис домена Diary (HttpClient)', () => 
     expect(received).toEqual(entry);
   });
 
-  it('updateQuantity: PUT diary/items/{id} с граммами', () => {
+  it('updateItem: PUT diary/items/{id} с количеством и данными продукта', () => {
     let received: DiaryEntry | undefined;
-    service.updateQuantity('item-1', 200).subscribe((value) => (received = value));
+    service
+      .updateItem('item-1', {
+        quantity: 200,
+        product: { name: 'Груша', calories: 57, protein: 0.4, fat: 0.1, carbs: 15, category: 'Фрукты' },
+      })
+      .subscribe((value) => (received = value));
 
     const request = http.expectOne('diary/items/item-1');
     expect(request.request.method).toBe('PUT');
-    expect(request.request.body).toEqual({ quantity: 200 });
+    expect(request.request.body).toEqual({
+      quantity: 200,
+      product: { name: 'Груша', calories: 57, protein: 0.4, fat: 0.1, carbs: 15, category: 'Фрукты' },
+    });
     request.flush(emptyEntry('d'));
 
     expect(received).toBeDefined();

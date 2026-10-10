@@ -18,6 +18,7 @@ import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService, MeDto } from '../services/auth.service';
+import { GlobalLoaderService } from '../services/global-loader.service';
 
 /** Домашний маршрут авторизованной части — дашборд. */
 export const HOME_PATH = '/';
@@ -33,11 +34,17 @@ function toHome(router: Router): UrlTree {
 }
 
 /** Текущий пользователь для решения guard'а; нет сессии/сбой → null. */
-async function resolveCurrentUser(auth: AuthService): Promise<MeDto | null> {
+async function resolveCurrentUser(
+  auth: AuthService,
+  loader: GlobalLoaderService,
+): Promise<MeDto | null> {
+  loader.show();
   try {
     return await firstValueFrom(auth.loadMe());
   } catch {
     return null;
+  } finally {
+    loader.hide();
   }
 }
 
@@ -46,7 +53,10 @@ async function resolveCurrentUser(auth: AuthService): Promise<MeDto | null> {
  */
 export const authGuard: CanActivateFn = async () => {
   const router = inject(Router);
-  const me = await resolveCurrentUser(inject(AuthService));
+  const me = await resolveCurrentUser(
+    inject(AuthService),
+    inject(GlobalLoaderService),
+  );
   return me !== null ? true : toLogin(router);
 };
 
@@ -56,7 +66,10 @@ export const authGuard: CanActivateFn = async () => {
  */
 export const guestGuard: CanActivateFn = async () => {
   const router = inject(Router);
-  const me = await resolveCurrentUser(inject(AuthService));
+  const me = await resolveCurrentUser(
+    inject(AuthService),
+    inject(GlobalLoaderService),
+  );
   return me !== null ? toHome(router) : true;
 };
 
@@ -65,6 +78,9 @@ export const guestGuard: CanActivateFn = async () => {
  */
 export const homeGuard: CanActivateFn = async () => {
   const router = inject(Router);
-  const me = await resolveCurrentUser(inject(AuthService));
+  const me = await resolveCurrentUser(
+    inject(AuthService),
+    inject(GlobalLoaderService),
+  );
   return me !== null ? toHome(router) : toLogin(router);
 };

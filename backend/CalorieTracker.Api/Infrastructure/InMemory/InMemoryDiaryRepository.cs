@@ -11,50 +11,72 @@ public sealed class InMemoryDiaryRepository : IDiaryRepository
 
     public InMemoryDiaryRepository(InMemoryDatabase db) => _db = db;
 
-    public DiaryEntry? Find(Guid userId, DateOnly date)
+    public Task<DiaryEntry?> FindAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Diary.FirstOrDefault(entry => entry.UserId == userId && entry.Date == date);
+            return Task.FromResult(
+                _db.Diary.FirstOrDefault(entry => entry.UserId == userId && entry.Date == date));
         }
     }
 
-    public DiaryEntry GetOrCreate(Guid userId, DateOnly date)
+    public Task<DiaryEntry> GetOrCreateAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             var existing = _db.Diary.FirstOrDefault(entry => entry.UserId == userId && entry.Date == date);
             if (existing is not null)
             {
-                return existing;
+                return Task.FromResult(existing);
             }
 
             var created = DiaryEntry.CreateEmpty(userId, date);
             _db.Diary.Add(created);
-            return created;
+            return Task.FromResult(created);
         }
     }
 
-    public DiaryEntry? FindByItemId(Guid userId, Guid itemId)
+    public Task<DiaryEntry?> FindByItemIdAsync(
+        Guid userId,
+        Guid itemId,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Diary.FirstOrDefault(entry =>
-                entry.UserId == userId && entry.FindItem(itemId) is not null);
+            return Task.FromResult(_db.Diary.FirstOrDefault(entry =>
+                entry.UserId == userId && entry.FindItem(itemId) is not null));
         }
     }
 
-    public IReadOnlyList<DiaryEntry> GetAllForUser(Guid userId)
+    public Task<IReadOnlyList<DiaryEntry>> GetAllForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Diary.Where(entry => entry.UserId == userId).ToList();
+            IReadOnlyList<DiaryEntry> entries =
+                _db.Diary.Where(entry => entry.UserId == userId).ToList();
+            return Task.FromResult(entries);
         }
     }
 
-    public PagedResult<DiaryEntry> GetHistoryPage(Guid userId, Pagination pagination)
+    public Task<PagedResult<DiaryEntry>> GetHistoryPageAsync(
+        Guid userId,
+        Pagination pagination,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pagination);
+        cancellationToken.ThrowIfCancellationRequested();
 
         lock (_db.SyncRoot)
         {
@@ -68,12 +90,14 @@ public sealed class InMemoryDiaryRepository : IDiaryRepository
                 .Take(pagination.PageSize)
                 .ToList();
 
-            return new PagedResult<DiaryEntry>(items, pagination.Page, pagination.PageSize, ordered.Count);
+            return Task.FromResult(
+                new PagedResult<DiaryEntry>(items, pagination.Page, pagination.PageSize, ordered.Count));
         }
     }
 
-    public void Save(DiaryEntry entry)
+    public Task SaveAsync(DiaryEntry entry, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             if (!_db.Diary.Any(candidate => candidate.Id == entry.Id))
@@ -81,13 +105,18 @@ public sealed class InMemoryDiaryRepository : IDiaryRepository
                 _db.Diary.Add(entry);
             }
         }
+
+        return Task.CompletedTask;
     }
 
-    public void RemoveAllForUser(Guid userId)
+    public Task RemoveAllForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Diary.RemoveAll(entry => entry.UserId == userId);
         }
+
+        return Task.CompletedTask;
     }
 }

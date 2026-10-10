@@ -117,6 +117,52 @@ public sealed class DiaryApiTests : IClassFixture<CalorieTrackerFactory>
     }
 
     [Fact]
+    public async Task UpdateItem_WithProduct_Returns200AndUpdatesProductAndQuantity()
+    {
+        var (client, _) = await _factory.RegisterAsync();
+        var added = await (await client.PostAsJsonAsync("/api/v1/diary/items", FoodPayload("Банан", 120, 89)))
+            .ReadAsync<DiaryResponse>();
+        var itemId = added.Meals.SelectMany(meal => meal.Items).Single().Id;
+
+        var response = await client.PutAsJsonAsync($"/api/v1/diary/items/{itemId}", new
+        {
+            quantity = 200,
+            product = new { name = "Груша", calories = 57, protein = 0.4, fat = 0.1, carbs = 15, category = "Фрукты" },
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var entry = await response.ReadAsync<DiaryResponse>();
+        var item = entry.Meals.SelectMany(meal => meal.Items).Single();
+        Assert.Equal(200, item.Quantity);
+        Assert.Equal("Груша", item.Product.Name);
+        Assert.Equal(57, item.Product.Calories);
+        Assert.Equal(0.4, item.Product.Protein);
+        Assert.Equal(0.1, item.Product.Fat);
+        Assert.Equal(15, item.Product.Carbs);
+    }
+
+    [Fact]
+    public async Task UpdateItem_InvalidProduct_Returns400WithFieldErrors()
+    {
+        var (client, _) = await _factory.RegisterAsync();
+        var added = await (await client.PostAsJsonAsync("/api/v1/diary/items", FoodPayload()))
+            .ReadAsync<DiaryResponse>();
+        var itemId = added.Meals.SelectMany(meal => meal.Items).Single().Id;
+
+        var response = await client.PutAsJsonAsync($"/api/v1/diary/items/{itemId}", new
+        {
+            quantity = 100,
+            product = new { name = "", calories = -5, protein = 0, fat = 0, carbs = 0 },
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.ReadErrorAsync();
+        Assert.Equal("Данные заполнены неверно", error.Message);
+        Assert.Contains("name", error.Errors!.Keys);
+        Assert.Contains("calories", error.Errors.Keys);
+    }
+
+    [Fact]
     public async Task UpdateQuantity_UnknownItem_Returns404()
     {
         var (client, _) = await _factory.RegisterAsync();

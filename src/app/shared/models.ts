@@ -137,6 +137,13 @@ export interface DiaryAddFoodParams {
   quantity: number;
 }
 
+/** Параметры diary.updateItem: новое количество и данные продукта (на 100 г). */
+export interface DiaryUpdateItemParams {
+  /** Количество в граммах. */
+  quantity: number;
+  product: FoodInput;
+}
+
 /** Параметры settings.update: частичное обновление. */
 export interface SettingsUpdateParams {
   weightUnit?: WeightUnit;

@@ -143,6 +143,19 @@ public static partial class DomainValidation
             : Array.Empty<string>();
     }
 
+    /// <summary>
+    /// Питательное значение вычисленной порции или итога дня: проверяется
+    /// только неотрицательность и конечность. Верхняя граница «на 100 г»
+    /// (<see cref="MaxNutrientPer100g"/>) к вычисленным значениям не
+    /// применяется — порция или итог законно превышают её.
+    /// </summary>
+    public static IReadOnlyList<string> NonNegativeTotal(double value)
+    {
+        return !double.IsFinite(value) || value < 0
+            ? new[] { ValidationTexts.NutritionNonNegative }
+            : Array.Empty<string>();
+    }
+
     private static bool IsAsciiDigit(char value) => value is >= '0' and <= '9';
 
     [GeneratedRegex(@"^[^\s@]+@([^\s@.]+\.)+[^\s@.]+$")]

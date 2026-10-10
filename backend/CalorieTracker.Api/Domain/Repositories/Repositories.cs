@@ -3,70 +3,93 @@ using CalorieTracker.Api.Domain.Entities;
 
 namespace CalorieTracker.Api.Domain.Repositories;
 
-/// <summary>Репозиторий пользователей (в инфраструктуре — in-memory заглушка).</summary>
+/// <summary>
+/// Репозиторий пользователей (в инфраструктуре — in-memory заглушка).
+/// Все операции асинхронны, чтобы замена на реальную БД (EF Core) не
+/// потребовала менять интерфейс.
+/// </summary>
 public interface IUserRepository
 {
-    User? FindById(Guid id);
+    Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Поиск по email без учёта регистра.</summary>
-    User? FindByEmail(string email);
+    Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
 
     /// <summary>Занят ли email кем-то, кроме указанного пользователя.</summary>
-    bool ExistsByEmail(string email, Guid? exceptUserId = null);
+    Task<bool> ExistsByEmailAsync(
+        string email,
+        Guid? exceptUserId = null,
+        CancellationToken cancellationToken = default);
 
-    void Add(User user);
+    Task AddAsync(User user, CancellationToken cancellationToken = default);
 
-    void Save(User user);
+    Task SaveAsync(User user, CancellationToken cancellationToken = default);
 
-    void Remove(Guid id);
+    Task RemoveAsync(Guid id, CancellationToken cancellationToken = default);
 
-    int Count { get; }
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>Репозиторий каталога продуктов.</summary>
 public interface IProductRepository
 {
-    Product? FindById(Guid id);
+    Task<Product?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>Постраничный каталог, отсортированный по названию (Skip/Take внутри).</summary>
-    PagedResult<Product> GetPaged(Pagination pagination);
+    Task<PagedResult<Product>> GetPagedAsync(
+        Pagination pagination,
+        CancellationToken cancellationToken = default);
 
-    void Add(Product product);
+    Task AddAsync(Product product, CancellationToken cancellationToken = default);
 
-    int Count { get; }
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>Репозиторий дневника питания.</summary>
 public interface IDiaryRepository
 {
-    DiaryEntry? Find(Guid userId, DateOnly date);
+    Task<DiaryEntry?> FindAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Возвращает запись дня, создавая пустую при отсутствии.</summary>
-    DiaryEntry GetOrCreate(Guid userId, DateOnly date);
+    Task<DiaryEntry> GetOrCreateAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Запись, содержащая позицию с указанным id, в пределах пользователя.</summary>
-    DiaryEntry? FindByItemId(Guid userId, Guid itemId);
+    Task<DiaryEntry?> FindByItemIdAsync(
+        Guid userId,
+        Guid itemId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Все записи пользователя (данные уже отфильтрованы по владельцу).</summary>
-    IReadOnlyList<DiaryEntry> GetAllForUser(Guid userId);
+    Task<IReadOnlyList<DiaryEntry>> GetAllForUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Постраничная история по датам (по убыванию) с Skip/Take внутри.</summary>
-    PagedResult<DiaryEntry> GetHistoryPage(Guid userId, Pagination pagination);
+    Task<PagedResult<DiaryEntry>> GetHistoryPageAsync(
+        Guid userId,
+        Pagination pagination,
+        CancellationToken cancellationToken = default);
 
-    void Save(DiaryEntry entry);
+    Task SaveAsync(DiaryEntry entry, CancellationToken cancellationToken = default);
 
-    void RemoveAllForUser(Guid userId);
+    Task RemoveAllForUserAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Репозиторий настроек пользователя.</summary>
 public interface ISettingsRepository
 {
-    UserSettings? Find(Guid userId);
+    Task<UserSettings?> FindAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>Возвращает настройки, создавая значения по умолчанию при отсутствии.</summary>
-    UserSettings GetOrCreate(Guid userId);
+    Task<UserSettings> GetOrCreateAsync(Guid userId, CancellationToken cancellationToken = default);
 
-    void Save(UserSettings settings);
+    Task SaveAsync(UserSettings settings, CancellationToken cancellationToken = default);
 
-    void Remove(Guid userId);
+    Task RemoveAsync(Guid userId, CancellationToken cancellationToken = default);
 }

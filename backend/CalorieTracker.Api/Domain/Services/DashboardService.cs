@@ -9,7 +9,10 @@ namespace CalorieTracker.Api.Domain.Services;
 public interface IDashboardService
 {
     /// <summary>Агрегат дня за дату: итоги, разбивка по приёмам, недавние продукты, нормы.</summary>
-    DashboardData GetDay(Guid userId, DateOnly date);
+    Task<DashboardData> GetDayAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc cref="IDashboardService" />
@@ -34,9 +37,12 @@ public sealed class DashboardService : IDashboardService
         _settings = settings;
     }
 
-    public DashboardData GetDay(Guid userId, DateOnly date)
+    public async Task<DashboardData> GetDayAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default)
     {
-        var entry = _diary.Find(userId, date);
+        var entry = await _diary.FindAsync(userId, date, cancellationToken);
         var totals = entry is null
             ? ValueObjects.NutritionFacts.Zero
             : NutritionCalculator.Sum(entry.AllItems);
@@ -56,7 +62,8 @@ public sealed class DashboardService : IDashboardService
             })
             .ToList();
 
-        var settings = _settings.Find(userId) ?? UserSettings.CreateDefault(userId);
+        var settings = await _settings.FindAsync(userId, cancellationToken)
+            ?? UserSettings.CreateDefault(userId);
 
         return new DashboardData
         {
@@ -66,7 +73,7 @@ public sealed class DashboardService : IDashboardService
             TotalFat = totals.Fat,
             TotalCarbs = totals.Carbs,
             Meals = meals,
-            RecentProducts = FindRecentProducts(userId),
+            RecentProducts = await FindRecentProductsAsync(userId, cancellationToken),
             Goals = DashboardGoals.From(settings),
         };
     }
@@ -75,9 +82,11 @@ public sealed class DashboardService : IDashboardService
     /// Недавние продукты: уникальные по названию продукты дневника
     /// пользователя, записи — по убыванию даты, не более четырёх.
     /// </summary>
-    private IReadOnlyList<Product> FindRecentProducts(Guid userId)
+    private async Task<IReadOnlyList<Product>> FindRecentProductsAsync(
+        Guid userId,
+        CancellationToken cancellationToken)
     {
-        var records = _diary.GetAllForUser(userId)
+        var records = (await _diary.GetAllForUserAsync(userId, cancellationToken))
             .OrderByDescending(record => record.Date);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);

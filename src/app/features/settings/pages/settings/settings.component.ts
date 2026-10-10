@@ -33,6 +33,7 @@ import { ButtonComponent } from '../../../../shared/components/button/button.com
 import { CardComponent } from '../../../../shared/components/card/card.component';
 import { InputComponent } from '../../../../shared/components/input/input.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { SpinnerComponent } from '../../../../shared/components/spinner/spinner.component';
 import { ToggleComponent } from '../../../../shared/components/toggle/toggle.component';
 import { submitting } from '../../../../shared/loading/submitting';
 import { WeightUnit } from '../../../../shared/models';
@@ -57,6 +58,7 @@ import {
     InputComponent,
     ToggleComponent,
     ModalComponent,
+    SpinnerComponent,
   ],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
@@ -83,7 +85,8 @@ export class SettingsComponent implements OnInit {
   /** Отображение: единица веса и уведомления. */
   protected readonly unit = signal<WeightUnit>('g');
   protected readonly notificationsEnabled = signal(true);
-  protected readonly settingsState = submitting();
+  protected readonly unitState = submitting();
+  protected readonly notificationsState = submitting();
 
   /** Смена пароля. */
   protected readonly passwordModalOpen = signal(false);
@@ -148,7 +151,7 @@ export class SettingsComponent implements OnInit {
     if (this.unit() === unit) {
       return;
     }
-    await this.settingsState.run(async () => {
+    await this.unitState.run(async () => {
       try {
         const settings = await firstValueFrom(this.settingsService.update({ weightUnit: unit }));
         this.applySettings(settings.weightUnit, settings.notificationsEnabled);
@@ -160,7 +163,7 @@ export class SettingsComponent implements OnInit {
 
   /** Переключатель уведомлений → частичное обновление настроек. */
   protected async setNotificationsEnabled(enabled: boolean): Promise<void> {
-    await this.settingsState.run(async () => {
+    await this.notificationsState.run(async () => {
       try {
         const settings = await firstValueFrom(
           this.settingsService.update({ notificationsEnabled: enabled }),

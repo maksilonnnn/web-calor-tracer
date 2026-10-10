@@ -8,10 +8,13 @@ namespace CalorieTracker.Api.Domain.Services;
 public interface ISettingsService
 {
     /// <summary>Настройки пользователя (значения по умолчанию при отсутствии записи).</summary>
-    UserSettings Get(Guid userId);
+    Task<UserSettings> GetAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>Частичное обновление: переданные поля накладываются на текущие.</summary>
-    UserSettings Update(Guid userId, SettingsUpdateCommand command);
+    Task<UserSettings> UpdateAsync(
+        Guid userId,
+        SettingsUpdateCommand command,
+        CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc cref="ISettingsService" />
@@ -24,16 +27,22 @@ public sealed class SettingsService : ISettingsService
         _settings = settings;
     }
 
-    public UserSettings Get(Guid userId) =>
-        _settings.Find(userId) ?? UserSettings.CreateDefault(userId);
+    public async Task<UserSettings> GetAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        await _settings.FindAsync(userId, cancellationToken)
+        ?? UserSettings.CreateDefault(userId);
 
-    public UserSettings Update(Guid userId, SettingsUpdateCommand command)
+    public async Task<UserSettings> UpdateAsync(
+        Guid userId,
+        SettingsUpdateCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var settings = _settings.GetOrCreate(userId);
+        var settings = await _settings.GetOrCreateAsync(userId, cancellationToken);
         settings.Update(command.WeightUnit, command.NotificationsEnabled);
-        _settings.Save(settings);
+        await _settings.SaveAsync(settings, cancellationToken);
         return settings;
     }
 }

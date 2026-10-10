@@ -57,3 +57,14 @@ public sealed class AddFoodCommand
 
     public double Quantity { get; init; }
 }
+
+/// <summary>
+/// Команда изменения позиции дневника: количество и опционально новые данные
+/// продукта (снимка). Без Product меняется только количество.
+/// </summary>
+public sealed class UpdateItemCommand
+{
+    public double Quantity { get; init; }
+
+    public ProductInput? Product { get; init; }
+}

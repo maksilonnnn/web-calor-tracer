@@ -11,16 +11,22 @@ namespace CalorieTracker.Api.Domain.Services;
 /// <summary>Служба профиля: чтение/редактирование профиля, смена пароля, удаление аккаунта.</summary>
 public interface IProfileService
 {
-    User GetProfile(Guid userId);
+    Task<User> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>Обновление имени/email; занятый email → 409.</summary>
-    User UpdateProfile(Guid userId, ProfileUpdateCommand command);
+    Task<User> UpdateProfileAsync(
+        Guid userId,
+        ProfileUpdateCommand command,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Смена пароля; неверный текущий пароль → 400 «Неверный текущий пароль».</summary>
-    void ChangePassword(Guid userId, ChangePasswordCommand command);
+    Task ChangePasswordAsync(
+        Guid userId,
+        ChangePasswordCommand command,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Удаление аккаунта вместе с его дневником и настройками.</summary>
-    void DeleteAccount(Guid userId);
+    Task DeleteAccountAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc cref="IProfileService" />
@@ -43,13 +49,19 @@ public sealed class ProfileService : IProfileService
         _passwordHasher = passwordHasher;
     }
 
-    public User GetProfile(Guid userId) =>
-        _users.FindById(userId) ?? throw new UnauthorizedException(Messages.Unauthorized);
+    public async Task<User> GetProfileAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default) =>
+        await _users.FindByIdAsync(userId, cancellationToken)
+        ?? throw new UnauthorizedException(Messages.Unauthorized);
 
-    public User UpdateProfile(Guid userId, ProfileUpdateCommand command)
+    public async Task<User> UpdateProfileAsync(
+        Guid userId,
+        ProfileUpdateCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var user = GetProfile(userId);
+        var user = await GetProfileAsync(userId, cancellationToken);
 
         var errors = new ValidationErrors();
         errors.Add("name", DomainValidation.Name(command.Name));
@@ -58,20 +70,23 @@ public sealed class ProfileService : IProfileService
 
         var name = PersonName.Create(command.Name);
         var email = Email.Create(command.Email);
-        if (_users.ExistsByEmail(email.Value, user.Id))
+        if (await _users.ExistsByEmailAsync(email.Value, user.Id, cancellationToken))
         {
             throw new ConflictException(Messages.EmailTaken);
         }
 
         user.UpdateProfile(name, email);
-        _users.Save(user);
+        await _users.SaveAsync(user, cancellationToken);
         return user;
     }
 
-    public void ChangePassword(Guid userId, ChangePasswordCommand command)
+    public async Task ChangePasswordAsync(
+        Guid userId,
+        ChangePasswordCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
-        var user = GetProfile(userId);
+        var user = await GetProfileAsync(userId, cancellationToken);
 
         // Неверный текущий пароль проверяется ДО полевых ошибок нового пароля.
         if (!_passwordHasher.Verify(command.CurrentPassword ?? string.Empty, user.PasswordHash))
@@ -85,14 +100,16 @@ public sealed class ProfileService : IProfileService
         errors.ThrowIfAny();
 
         user.ChangePasswordHash(_passwordHasher.Hash(command.Password));
-        _users.Save(user);
+        await _users.SaveAsync(user, cancellationToken);
     }
 
-    public void DeleteAccount(Guid userId)
+    public async Task DeleteAccountAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
     {
-        _ = GetProfile(userId);
-        _diary.RemoveAllForUser(userId);
-        _settings.Remove(userId);
-        _users.Remove(userId);
+        _ = await GetProfileAsync(userId, cancellationToken);
+        await _diary.RemoveAllForUserAsync(userId, cancellationToken);
+        await _settings.RemoveAsync(userId, cancellationToken);
+        await _users.RemoveAsync(userId, cancellationToken);
     }
 }

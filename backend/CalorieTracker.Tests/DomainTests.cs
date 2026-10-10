@@ -127,6 +127,47 @@ public sealed class DomainTests
     }
 
     [Fact]
+    public void NutritionCalculator_Calculate_PortionAbovePer100gBound_IsAllowed()
+    {
+        // Питательность «на 100 г» — в пределах границы (3 000 < 10 000),
+        // но порция (700 г) по калориям законно превышает её.
+        var product = Product.Create(
+            ProductName.Create("Каша"),
+            NutritionFacts.Create(3_000, 100, 100, 100));
+
+        var value = NutritionCalculator.Calculate(product, 700);
+
+        Assert.Equal(21_000, value.Calories);
+        Assert.Equal(700, value.Protein);
+    }
+
+    [Fact]
+    public void NutritionCalculator_Sum_DailyTotalAbovePer100gBound_IsAllowed()
+    {
+        var product = Product.Create(
+            ProductName.Create("Блюдо"),
+            NutritionFacts.Create(1_500, 1_500, 1_500, 1_500));
+        var items = new[]
+        {
+            MealItem.Create(product, GramAmount.Create(500)),
+            MealItem.Create(product, GramAmount.Create(500)),
+        };
+
+        var total = NutritionCalculator.Sum(items);
+
+        Assert.Equal(15_000, total.Calories); // итог дня выше 10 000 — это валидно
+        Assert.Equal(15_000, total.Protein);
+    }
+
+    [Fact]
+    public void NutritionFacts_CreateTotal_NegativeOrNonFinite_Throws()
+    {
+        Assert.Throws<DomainValidationException>(() => NutritionFacts.CreateTotal(-1, 0, 0, 0));
+        Assert.Throws<DomainValidationException>(
+            () => NutritionFacts.CreateTotal(0, double.PositiveInfinity, 0, 0));
+    }
+
+    [Fact]
     public void DiaryEntry_AlwaysHasFourMeals()
     {
         var entry = DiaryEntry.CreateEmpty(Guid.NewGuid(), new DateOnly(2026, 1, 1));

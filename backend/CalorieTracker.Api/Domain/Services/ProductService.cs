@@ -8,7 +8,10 @@ namespace CalorieTracker.Api.Domain.Services;
 public interface IProductService
 {
     /// <summary>Страница каталога, отсортированная по названию.</summary>
-    PagedResult<Product> GetPaged(int? page, int? pageSize);
+    Task<PagedResult<Product>> GetPagedAsync(
+        int? page,
+        int? pageSize,
+        CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc cref="IProductService" />
@@ -21,6 +24,9 @@ public sealed class ProductService : IProductService
         _products = products;
     }
 
-    public PagedResult<Product> GetPaged(int? page, int? pageSize) =>
-        _products.GetPaged(Pagination.Create(page, pageSize));
+    public Task<PagedResult<Product>> GetPagedAsync(
+        int? page,
+        int? pageSize,
+        CancellationToken cancellationToken = default) =>
+        _products.GetPagedAsync(Pagination.Create(page, pageSize), cancellationToken);
 }

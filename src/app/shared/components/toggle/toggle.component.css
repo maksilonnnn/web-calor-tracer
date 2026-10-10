@@ -33,6 +33,7 @@
       transform: translateX(18px);
       background: #ffffff;
     }
-    .toggle-switch:focus-visible {
-      box-shadow: 0 0 0 3px var(--accent-ring);
+    .toggle-switch:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }

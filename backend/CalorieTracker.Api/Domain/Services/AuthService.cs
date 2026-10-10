@@ -12,13 +12,13 @@ namespace CalorieTracker.Api.Domain.Services;
 public interface IAuthService
 {
     /// <summary>Регистрация: валидация полей → 409 при занятом email → создание и вход.</summary>
-    AuthResult Register(RegisterCommand command);
+    Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>Вход: единый 401 без раскрытия существования аккаунта.</summary>
-    AuthResult Login(LoginCommand command);
+    Task<AuthResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>Текущий пользователь по id из токена; отсутствует → 401.</summary>
-    User GetCurrentUser(Guid userId);
+    Task<User> GetCurrentUserAsync(Guid userId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>Результат успешной аутентификации: пользователь и выпущенный токен.</summary>
@@ -46,7 +46,9 @@ public sealed class AuthService : IAuthService
         _tokenService = tokenService;
     }
 
-    public AuthResult Register(RegisterCommand command)
+    public async Task<AuthResult> RegisterAsync(
+        RegisterCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -59,7 +61,7 @@ public sealed class AuthService : IAuthService
         errors.ThrowIfAny();
 
         var email = Email.Create(command.Email);
-        if (_users.ExistsByEmail(email.Value))
+        if (await _users.ExistsByEmailAsync(email.Value, cancellationToken: cancellationToken))
         {
             throw new ConflictException(Messages.EmailTaken);
         }
@@ -68,17 +70,20 @@ public sealed class AuthService : IAuthService
             PersonName.Create(command.Name),
             email,
             _passwordHasher.Hash(command.Password));
-        _users.Add(user);
+        await _users.AddAsync(user, cancellationToken);
 
+        // Выпуск токена — синхронный (без ввода-вывода), обёртка не нужна.
         return new AuthResult { User = user, Token = _tokenService.CreateToken(user) };
     }
 
-    public AuthResult Login(LoginCommand command)
+    public async Task<AuthResult> LoginAsync(
+        LoginCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
         var email = (command.Email ?? string.Empty).Trim();
-        var user = _users.FindByEmail(email);
+        var user = await _users.FindByEmailAsync(email, cancellationToken);
         if (user is null || !_passwordHasher.Verify(command.Password ?? string.Empty, user.PasswordHash))
         {
             throw new UnauthorizedException(Messages.WrongCredentials);
@@ -87,13 +92,16 @@ public sealed class AuthService : IAuthService
         return new AuthResult { User = user, Token = _tokenService.CreateToken(user) };
     }
 
-    public User GetCurrentUser(Guid userId)
+    public async Task<User> GetCurrentUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default)
     {
         if (userId == Guid.Empty)
         {
             throw new UnauthorizedException(Messages.Unauthorized);
         }
 
-        return _users.FindById(userId) ?? throw new UnauthorizedException(Messages.Unauthorized);
+        return await _users.FindByIdAsync(userId, cancellationToken)
+            ?? throw new UnauthorizedException(Messages.Unauthorized);
     }
 }

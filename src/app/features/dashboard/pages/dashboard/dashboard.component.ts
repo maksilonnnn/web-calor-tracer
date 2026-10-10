@@ -22,6 +22,7 @@ import { toApiError } from '../../../../shared/api-error';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { CardComponent } from '../../../../shared/components/card/card.component';
 import { ProgressBarComponent } from '../../../../shared/components/progress-bar/progress-bar.component';
+import { SpinnerComponent } from '../../../../shared/components/spinner/spinner.component';
 import { todayIso } from '../../../../shared/dates';
 import { DashboardData, MEAL_TYPE_ICONS, MEAL_TYPE_LABELS } from '../../../../shared/models';
 import { NotificationService } from '../../../../shared/notifications/notification-service';
@@ -35,6 +36,7 @@ import { AddFoodModalComponent } from '../../components/add-food-modal/add-food-
     ButtonComponent,
     CardComponent,
     ProgressBarComponent,
+    SpinnerComponent,
     AddFoodModalComponent,
   ],
   templateUrl: './dashboard.component.html',

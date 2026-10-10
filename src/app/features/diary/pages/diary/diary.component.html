@@ -15,7 +15,10 @@
       </header>
 
       @if (loading()) {
-        <p class="diary-status" data-test="diary-loading">Загрузка…</p>
+        <div class="page-loading" data-test="diary-loading">
+          <app-spinner size="lg" label="Загрузка…" />
+          <p class="page-loading-text">Загрузка…</p>
+        </div>
       } @else {
         @if (entry(); as e) {
         <div class="diary-content">
@@ -81,9 +84,15 @@
     </div>
 
     <!-- Модальное окно редактирования -->
-    <app-modal [isOpen]="editItem() !== null" title="Изменить количество" (close)="closeEditModal()">
-      <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="modal-body">
-        <p class="modal-product-name">{{ editItem()?.product?.name }}</p>
+    <app-modal [isOpen]="editItem() !== null" title="Изменить блюдо" (close)="closeEditModal()">
+      <form [formGroup]="editForm" (ngSubmit)="saveEdit()" class="modal-body edit-food-form">
+        <app-input
+          label="Название"
+          formControlName="name"
+          placeholder="Например, Куриная грудка"
+          [error]="nameError()"
+          data-test="edit-name-input"
+        />
         <app-input
           label="Количество"
           type="number"
@@ -92,11 +101,54 @@
           [error]="quantityError()"
           data-test="edit-quantity-input"
         />
+        <p class="form-block-label">Пищевая ценность на 100 г</p>
+        <div class="nutrition-grid">
+          <app-input
+            label="Калории"
+            type="number"
+            formControlName="calories"
+            unit="ккал"
+            [error]="caloriesError()"
+            data-test="edit-calories-input"
+          />
+          <app-input
+            label="Белки"
+            type="number"
+            formControlName="protein"
+            unit="г"
+            [error]="proteinError()"
+            data-test="edit-protein-input"
+          />
+          <app-input
+            label="Жиры"
+            type="number"
+            formControlName="fat"
+            unit="г"
+            [error]="fatError()"
+            data-test="edit-fat-input"
+          />
+          <app-input
+            label="Углеводы"
+            type="number"
+            formControlName="carbs"
+            unit="г"
+            [error]="carbsError()"
+            data-test="edit-carbs-input"
+          />
+        </div>
+        <div class="form-group">
+          <span class="group-label">Категория</span>
+          <select class="select" formControlName="category" data-test="edit-category-select">
+            @for (category of categories; track category) {
+              <option [value]="category">{{ category }}</option>
+            }
+          </select>
+        </div>
         <div class="modal-actions">
           <app-button variant="secondary" fullWidth (click)="closeEditModal()">
             Отмена
           </app-button>
-          <app-button type="submit" fullWidth [disabled]="editState.busy()" data-test="edit-save">
+          <app-button type="submit" fullWidth [loading]="editState.busy()" data-test="edit-save">
             Сохранить
           </app-button>
         </div>
@@ -116,7 +168,7 @@
           <app-button
             variant="danger"
             fullWidth
-            [disabled]="deleteState.busy()"
+            [loading]="deleteState.busy()"
             (click)="confirmDelete()"
             data-test="delete-confirm"
           >

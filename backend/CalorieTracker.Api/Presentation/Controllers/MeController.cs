@@ -25,7 +25,8 @@ public sealed class MeController : ApiControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<UserDto> Get() => Ok(DtoMapper.ToDto(_profile.GetProfile(CurrentUserId)));
+    public async Task<ActionResult<UserDto>> Get(CancellationToken cancellationToken) =>
+        Ok(DtoMapper.ToDto(await _profile.GetProfileAsync(CurrentUserId, cancellationToken)));
 
     /// <summary>Обновление имени и email; занятый email → 409.</summary>
     [HttpPut]
@@ -33,14 +34,16 @@ public sealed class MeController : ApiControllerBase
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status409Conflict)]
-    public ActionResult<UserDto> Update([FromBody] ProfileUpdateRequest? request)
+    public async Task<ActionResult<UserDto>> Update(
+        [FromBody] ProfileUpdateRequest? request,
+        CancellationToken cancellationToken)
     {
         var body = Body(request);
-        var user = _profile.UpdateProfile(CurrentUserId, new ProfileUpdateCommand
+        var user = await _profile.UpdateProfileAsync(CurrentUserId, new ProfileUpdateCommand
         {
             Name = body.Name ?? string.Empty,
             Email = body.Email ?? string.Empty,
-        });
+        }, cancellationToken);
         return Ok(DtoMapper.ToDto(user));
     }
 
@@ -49,15 +52,17 @@ public sealed class MeController : ApiControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public IActionResult ChangePassword([FromBody] ChangePasswordRequest? request)
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest? request,
+        CancellationToken cancellationToken)
     {
         var body = Body(request);
-        _profile.ChangePassword(CurrentUserId, new ChangePasswordCommand
+        await _profile.ChangePasswordAsync(CurrentUserId, new ChangePasswordCommand
         {
             CurrentPassword = body.CurrentPassword ?? string.Empty,
             Password = body.Password ?? string.Empty,
             ConfirmPassword = body.ConfirmPassword ?? string.Empty,
-        });
+        }, cancellationToken);
         return NoContent();
     }
 
@@ -65,9 +70,9 @@ public sealed class MeController : ApiControllerBase
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public IActionResult Delete()
+    public async Task<IActionResult> Delete(CancellationToken cancellationToken)
     {
-        _profile.DeleteAccount(CurrentUserId);
+        await _profile.DeleteAccountAsync(CurrentUserId, cancellationToken);
         AuthCookie.Delete(Response, _options);
         return NoContent();
     }

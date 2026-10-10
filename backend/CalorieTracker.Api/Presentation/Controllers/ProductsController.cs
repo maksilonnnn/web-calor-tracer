@@ -18,11 +18,12 @@ public sealed class ProductsController : ApiControllerBase
     [ProducesResponseType(typeof(PagedResultDto<ProductDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
-    public ActionResult<PagedResultDto<ProductDto>> Get(
+    public async Task<ActionResult<PagedResultDto<ProductDto>>> Get(
         [FromQuery] int? page,
-        [FromQuery] int? pageSize)
+        [FromQuery] int? pageSize,
+        CancellationToken cancellationToken)
     {
-        var products = _products.GetPaged(page, pageSize);
+        var products = await _products.GetPagedAsync(page, pageSize, cancellationToken);
         return Ok(DtoMapper.ToDto(products, DtoMapper.ToDto));
     }
 }

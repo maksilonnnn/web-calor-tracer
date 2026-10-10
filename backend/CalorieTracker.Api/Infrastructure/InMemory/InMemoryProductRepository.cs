@@ -11,28 +11,30 @@ public sealed class InMemoryProductRepository : IProductRepository
 
     public InMemoryProductRepository(InMemoryDatabase db) => _db = db;
 
-    public int Count
+    public Task<int> CountAsync(CancellationToken cancellationToken = default)
     {
-        get
-        {
-            lock (_db.SyncRoot)
-            {
-                return _db.Products.Count;
-            }
-        }
-    }
-
-    public Product? FindById(Guid id)
-    {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Products.GetValueOrDefault(id);
+            return Task.FromResult(_db.Products.Count);
         }
     }
 
-    public PagedResult<Product> GetPaged(Pagination pagination)
+    public Task<Product?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_db.SyncRoot)
+        {
+            return Task.FromResult(_db.Products.GetValueOrDefault(id));
+        }
+    }
+
+    public Task<PagedResult<Product>> GetPagedAsync(
+        Pagination pagination,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pagination);
+        cancellationToken.ThrowIfCancellationRequested();
 
         lock (_db.SyncRoot)
         {
@@ -47,15 +49,19 @@ public sealed class InMemoryProductRepository : IProductRepository
                 .Take(pagination.PageSize)
                 .ToList();
 
-            return new PagedResult<Product>(items, pagination.Page, pagination.PageSize, ordered.Count);
+            return Task.FromResult(
+                new PagedResult<Product>(items, pagination.Page, pagination.PageSize, ordered.Count));
         }
     }
 
-    public void Add(Product product)
+    public Task AddAsync(Product product, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Products[product.Id] = product;
         }
+
+        return Task.CompletedTask;
     }
 }

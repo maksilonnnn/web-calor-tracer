@@ -67,6 +67,14 @@ public sealed class ExceptionHandlingMiddleware
                 ValidationTexts.InvalidForm,
                 new Dictionary<string, string[]>());
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Клиент оборвал соединение: отвечать некому, и это не ошибка
+            // сервера. Пишем не 500, а тихо завершаем на уровне Debug.
+            _logger.LogDebug("Запрос {Method} {Path} отменён клиентом.",
+                context.Request.Method,
+                context.Request.Path);
+        }
         catch (Exception exception)
         {
             _logger.LogError(exception, "Необработанная ошибка при обработке {Method} {Path}.",

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, booleanAttribute, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-toggle',
@@ -8,5 +8,6 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class ToggleComponent {
   readonly checked = input(false);
+  readonly disabled = input(false, { transform: booleanAttribute });
   readonly toggled = output<boolean>();
 }

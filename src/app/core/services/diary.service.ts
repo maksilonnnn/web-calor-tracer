@@ -1,7 +1,7 @@
 /**
  * DiaryService — сервис домена Diary для страниц: чтение дня, добавление
- * продукта, изменение количества и удаление позиции. Работает поверх
- * HttpClient; REST см. `/api/v1/diary`.
+ * продукта, изменение позиции (количество + данные продукта) и удаление.
+ * Работает поверх HttpClient; REST см. `/api/v1/diary`.
  *
  * Контракт addFood: { date, mealType, product: FoodInput, quantity }, где
  * quantity — всегда в граммах, а product — без id (его присваивает бэкенд).
@@ -10,10 +10,10 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { DiaryAddFoodParams, DiaryEntry, FoodInput } from '../../shared/models';
+import { DiaryAddFoodParams, DiaryEntry, DiaryUpdateItemParams, FoodInput } from '../../shared/models';
 
 /** Типы контракта Diary, потребляемые страницами и модалкой. */
-export type { DiaryAddFoodParams, FoodInput };
+export type { DiaryAddFoodParams, DiaryUpdateItemParams, FoodInput };
 
 @Injectable({ providedIn: 'root' })
 export class DiaryService {
@@ -30,9 +30,9 @@ export class DiaryService {
     return this.http.post<DiaryEntry>('diary/items', params);
   }
 
-  /** Изменение количества позиции; quantity — в граммах. */
-  updateQuantity(itemId: string, quantity: number): Observable<DiaryEntry> {
-    return this.http.put<DiaryEntry>(`diary/items/${itemId}`, { quantity });
+  /** Изменение позиции: количество и данные продукта на 100 г; quantity — в граммах. */
+  updateItem(itemId: string, params: DiaryUpdateItemParams): Observable<DiaryEntry> {
+    return this.http.put<DiaryEntry>(`diary/items/${itemId}`, params);
   }
 
   /** Удаление позиции по id. */

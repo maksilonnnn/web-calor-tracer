@@ -132,7 +132,7 @@
         <!-- Действия -->
         <div class="modal-actions">
           <app-button variant="secondary" (click)="close.emit()">Отмена</app-button>
-          <app-button type="submit" [disabled]="submitState.busy()" data-test="food-submit">
+          <app-button type="submit" [loading]="submitState.busy()" data-test="food-submit">
             @if (submitState.busy()) {
               Сохранение…
             } @else {

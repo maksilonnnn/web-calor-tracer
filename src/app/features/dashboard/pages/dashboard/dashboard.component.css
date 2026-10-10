@@ -23,7 +23,16 @@
       color: var(--text-secondary);
       margin: 4px 0 0 0;
     }
-    .dashboard-status {
+    /* Блок загрузки страницы */
+    .page-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 48px 0;
+    }
+    .page-loading-text {
       font-size: 14px;
       color: var(--text-secondary);
       margin: 0;

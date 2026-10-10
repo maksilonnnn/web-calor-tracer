@@ -15,7 +15,7 @@ var app = builder.Build();
 // Начальное заполнение in-memory заглушки (демо-данные).
 using (var scope = app.Services.CreateScope())
 {
-    scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().Seed();
+    await scope.ServiceProvider.GetRequiredService<DatabaseSeeder>().SeedAsync();
 }
 
 // Логирование — самым внешним, чтобы фиксировать итоговый код и время;

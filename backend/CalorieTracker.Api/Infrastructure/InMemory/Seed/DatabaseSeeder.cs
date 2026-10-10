@@ -48,7 +48,7 @@ public sealed class DatabaseSeeder
     }
 
     /// <summary>Заполняет заглушку, если сид включён и хранилище пусто.</summary>
-    public void Seed()
+    public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled)
         {
@@ -67,15 +67,15 @@ public sealed class DatabaseSeeder
             PersonName.Create(DemoName),
             Email.Create(DemoEmail),
             _passwordHasher.Hash(DemoPassword));
-        _users.Add(user);
+        await _users.AddAsync(user, cancellationToken);
 
         var catalog = ProductCatalog.CreateProducts();
         foreach (var product in catalog)
         {
-            _products.Add(product);
+            await _products.AddAsync(product, cancellationToken);
         }
 
-        _settings.Save(UserSettings.CreateDefault(user.Id));
+        await _settings.SaveAsync(UserSettings.CreateDefault(user.Id), cancellationToken);
 
         var today = DateParser.Today();
         for (var offset = 0; offset < SeedDiary.Length; offset++)
@@ -93,7 +93,7 @@ public sealed class DatabaseSeeder
                 }
             }
 
-            _diary.Save(entry);
+            await _diary.SaveAsync(entry, cancellationToken);
         }
     }
 

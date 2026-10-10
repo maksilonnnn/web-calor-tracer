@@ -10,65 +10,78 @@ public sealed class InMemoryUserRepository : IUserRepository
 
     public InMemoryUserRepository(InMemoryDatabase db) => _db = db;
 
-    public int Count
+    public Task<int> CountAsync(CancellationToken cancellationToken = default)
     {
-        get
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_db.SyncRoot)
         {
-            lock (_db.SyncRoot)
-            {
-                return _db.Users.Count;
-            }
+            return Task.FromResult(_db.Users.Count);
         }
     }
 
-    public User? FindById(Guid id)
+    public Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Users.GetValueOrDefault(id);
+            return Task.FromResult(_db.Users.GetValueOrDefault(id));
         }
     }
 
-    public User? FindByEmail(string email)
+    public Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Users.Values.FirstOrDefault(user =>
-                string.Equals(user.Email.Value, email, StringComparison.OrdinalIgnoreCase));
+            return Task.FromResult(_db.Users.Values.FirstOrDefault(user =>
+                string.Equals(user.Email.Value, email, StringComparison.OrdinalIgnoreCase)));
         }
     }
 
-    public bool ExistsByEmail(string email, Guid? exceptUserId = null)
+    public Task<bool> ExistsByEmailAsync(
+        string email,
+        Guid? exceptUserId = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
-            return _db.Users.Values.Any(user =>
+            return Task.FromResult(_db.Users.Values.Any(user =>
                 (exceptUserId is null || user.Id != exceptUserId.Value)
-                && string.Equals(user.Email.Value, email, StringComparison.OrdinalIgnoreCase));
+                && string.Equals(user.Email.Value, email, StringComparison.OrdinalIgnoreCase)));
         }
     }
 
-    public void Add(User user)
+    public Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Users[user.Id] = user;
         }
+
+        return Task.CompletedTask;
     }
 
-    public void Save(User user)
+    public Task SaveAsync(User user, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Users[user.Id] = user;
         }
+
+        return Task.CompletedTask;
     }
 
-    public void Remove(Guid id)
+    public Task RemoveAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         lock (_db.SyncRoot)
         {
             _db.Users.Remove(id);
         }
+
+        return Task.CompletedTask;
     }
 }

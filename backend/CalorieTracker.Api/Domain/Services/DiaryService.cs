@@ -11,19 +11,33 @@ namespace CalorieTracker.Api.Domain.Services;
 public interface IDiaryService
 {
     /// <summary>День пользователя за дату 'YYYY-MM-DD'; всегда четыре приёма пищи.</summary>
-    DiaryEntry GetDay(Guid userId, DateOnly date);
+    Task<DiaryEntry> GetDayAsync(Guid userId, DateOnly date, CancellationToken cancellationToken = default);
 
     /// <summary>Добавление продукта: валидация → новая позиция (и запись дня при необходимости).</summary>
-    DiaryEntry AddFood(Guid userId, AddFoodCommand command);
+    Task<DiaryEntry> AddFoodAsync(
+        Guid userId,
+        AddFoodCommand command,
+        CancellationToken cancellationToken = default);
 
-    /// <summary>Изменение количества позиции; чужая/несуществующая → 404.</summary>
-    DiaryEntry UpdateQuantity(Guid userId, Guid itemId, double quantity);
+    /// <summary>Изменение позиции: количество и опционально данные продукта (снимка); чужая/несуществующая → 404.</summary>
+    Task<DiaryEntry> UpdateItemAsync(
+        Guid userId,
+        Guid itemId,
+        UpdateItemCommand command,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Удаление позиции; чужая/несуществующая → 404.</summary>
-    DiaryEntry RemoveItem(Guid userId, Guid itemId);
+    Task<DiaryEntry> RemoveItemAsync(
+        Guid userId,
+        Guid itemId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Постраничная история дней пользователя (по убыванию даты).</summary>
-    PagedResult<DiaryHistoryItem> GetHistory(Guid userId, int? page, int? pageSize);
+    Task<PagedResult<DiaryHistoryItem>> GetHistoryAsync(
+        Guid userId,
+        int? page,
+        int? pageSize,
+        CancellationToken cancellationToken = default);
 }
 
 /// <inheritdoc cref="IDiaryService" />
@@ -36,10 +50,17 @@ public sealed class DiaryService : IDiaryService
         _diary = diary;
     }
 
-    public DiaryEntry GetDay(Guid userId, DateOnly date) =>
-        _diary.Find(userId, date) ?? DiaryEntry.CreateEmpty(userId, date);
+    public async Task<DiaryEntry> GetDayAsync(
+        Guid userId,
+        DateOnly date,
+        CancellationToken cancellationToken = default) =>
+        await _diary.FindAsync(userId, date, cancellationToken)
+        ?? DiaryEntry.CreateEmpty(userId, date);
 
-    public DiaryEntry AddFood(Guid userId, AddFoodCommand command)
+    public async Task<DiaryEntry> AddFoodAsync(
+        Guid userId,
+        AddFoodCommand command,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -60,30 +81,66 @@ public sealed class DiaryService : IDiaryService
         var quantity = GramAmount.Create(command.Quantity);
         var product = input.ToProduct();
 
-        var entry = _diary.GetOrCreate(userId, date);
+        var entry = await _diary.GetOrCreateAsync(userId, date, cancellationToken);
         var item = MealItem.Create(product, quantity);
         entry.AddItem(command.MealType, item);
-        _diary.Save(entry);
+        await _diary.SaveAsync(entry, cancellationToken);
         return entry;
     }
 
-    public DiaryEntry UpdateQuantity(Guid userId, Guid itemId, double quantity)
+    public async Task<DiaryEntry> UpdateItemAsync(
+        Guid userId,
+        Guid itemId,
+        UpdateItemCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var amount = GramAmount.Create(quantity);
+        ArgumentNullException.ThrowIfNull(command);
 
-        var entry = _diary.FindByItemId(userId, itemId)
+        var input = command.Product;
+
+        // Все полевые ошибки собираются в один 400 в порядке формы:
+        // name, quantity, calories, protein, fat, carbs. Продукт обновляется
+        // целиком, поэтому без него проверяется только количество.
+        var errors = new ValidationErrors();
+        if (input is not null)
+        {
+            errors.Add("name", DomainValidation.ProductName(input.Name));
+        }
+        errors.Add("quantity", DomainValidation.Quantity(command.Quantity));
+        if (input is not null)
+        {
+            errors.Add("calories", DomainValidation.NonNegative(input.Calories));
+            errors.Add("protein", DomainValidation.NonNegative(input.Protein));
+            errors.Add("fat", DomainValidation.NonNegative(input.Fat));
+            errors.Add("carbs", DomainValidation.NonNegative(input.Carbs));
+        }
+        errors.ThrowIfAny();
+
+        var entry = await _diary.FindByItemIdAsync(userId, itemId, cancellationToken)
             ?? throw new NotFoundException(Messages.NotFound);
 
         var item = entry.FindItem(itemId)
             ?? throw new NotFoundException(Messages.NotFound);
-        item.ChangeQuantity(amount);
-        _diary.Save(entry);
+
+        item.ChangeQuantity(GramAmount.Create(command.Quantity));
+        if (input is not null)
+        {
+            item.Product.UpdateDetails(
+                ProductName.Create(input.Name),
+                NutritionFacts.Create(input.Calories, input.Protein, input.Fat, input.Carbs),
+                input.Category);
+        }
+
+        await _diary.SaveAsync(entry, cancellationToken);
         return entry;
     }
 
-    public DiaryEntry RemoveItem(Guid userId, Guid itemId)
+    public async Task<DiaryEntry> RemoveItemAsync(
+        Guid userId,
+        Guid itemId,
+        CancellationToken cancellationToken = default)
     {
-        var entry = _diary.FindByItemId(userId, itemId)
+        var entry = await _diary.FindByItemIdAsync(userId, itemId, cancellationToken)
             ?? throw new NotFoundException(Messages.NotFound);
 
         if (!entry.RemoveItem(itemId))
@@ -91,14 +148,18 @@ public sealed class DiaryService : IDiaryService
             throw new NotFoundException(Messages.NotFound);
         }
 
-        _diary.Save(entry);
+        await _diary.SaveAsync(entry, cancellationToken);
         return entry;
     }
 
-    public PagedResult<DiaryHistoryItem> GetHistory(Guid userId, int? page, int? pageSize)
+    public async Task<PagedResult<DiaryHistoryItem>> GetHistoryAsync(
+        Guid userId,
+        int? page,
+        int? pageSize,
+        CancellationToken cancellationToken = default)
     {
         var pagination = Pagination.Create(page, pageSize);
-        var paged = _diary.GetHistoryPage(userId, pagination);
+        var paged = await _diary.GetHistoryPageAsync(userId, pagination, cancellationToken);
         var items = paged.Items
             .Select(entry =>
             {
