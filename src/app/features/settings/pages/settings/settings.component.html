@@ -7,7 +7,10 @@
       </header>
 
       @if (loading()) {
-        <p class="settings-status" data-test="settings-loading">Загрузка…</p>
+        <div class="page-loading" data-test="settings-loading">
+          <app-spinner size="lg" label="Загрузка…" />
+          <p class="page-loading-text">Загрузка…</p>
+        </div>
       } @else {
         <div class="settings-column">
           <!-- Профиль -->
@@ -36,7 +39,7 @@
               <div class="card-actions">
                 <app-button
                   type="submit"
-                  [disabled]="saveProfileState.busy()"
+                  [loading]="saveProfileState.busy()"
                   data-test="profile-save"
                 >
                   Сохранить изменения
@@ -61,6 +64,7 @@
                 <app-button
                   size="sm"
                   [variant]="unit() === 'g' ? 'primary' : 'secondary'"
+                  [loading]="unitState.busy()"
                   (click)="setWeightUnit('g')"
                   data-test="weight-unit-g"
                 >
@@ -69,6 +73,7 @@
                 <app-button
                   size="sm"
                   [variant]="unit() === 'kg' ? 'primary' : 'secondary'"
+                  [loading]="unitState.busy()"
                   (click)="setWeightUnit('kg')"
                   data-test="weight-unit-kg"
                 >
@@ -82,11 +87,17 @@
                 <p class="setting-name">Уведомления</p>
                 <p class="setting-description">Показывать уведомления о действиях</p>
               </div>
-              <app-toggle
-                [checked]="notificationsEnabled()"
-                (toggled)="setNotificationsEnabled($event)"
-                data-test="notifications-toggle"
-              />
+              <div class="setting-control">
+                @if (notificationsState.busy()) {
+                  <app-spinner size="sm" />
+                }
+                <app-toggle
+                  [checked]="notificationsEnabled()"
+                  [disabled]="notificationsState.busy()"
+                  (toggled)="setNotificationsEnabled($event)"
+                  data-test="notifications-toggle"
+                />
+              </div>
             </div>
           </app-card>
 
@@ -163,7 +174,7 @@
             <app-button
               type="submit"
               fullWidth
-              [disabled]="changePasswordState.busy()"
+              [loading]="changePasswordState.busy()"
               data-test="password-submit"
             >
               Сменить
@@ -185,7 +196,7 @@
             <app-button
               variant="danger"
               fullWidth
-              [disabled]="deleteState.busy()"
+              [loading]="deleteState.busy()"
               (click)="deleteAccount()"
               data-test="delete-confirm"
             >

@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { GlobalLoaderService } from '../../core/services/global-loader.service';
 import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
 
 @Component({
@@ -13,6 +15,7 @@ import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme
 export class SidebarComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly loader = inject(GlobalLoaderService);
 
   protected readonly user = this.auth.currentUser;
   protected readonly userInitial = computed(() => {
@@ -21,7 +24,12 @@ export class SidebarComponent {
   });
 
   protected async logout(): Promise<void> {
-    await this.auth.logout();
-    await this.router.navigateByUrl('/login');
+    this.loader.show();
+    try {
+      await firstValueFrom(this.auth.logout());
+      await this.router.navigateByUrl('/login');
+    } finally {
+      this.loader.hide();
+    }
   }
 }

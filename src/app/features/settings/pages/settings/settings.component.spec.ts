@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
 import { WritableSignal } from '@angular/core';
+import { of, Subject, throwError } from 'rxjs';
 
 import { DEFAULT_SETTINGS, Settings, UserDto, WeightUnit } from '../../../../shared/models';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -44,22 +45,22 @@ describe('SettingsComponent', () => {
 
   beforeEach(() => {
     profile = {
-      get: jasmine.createSpy('get').and.resolveTo(ME),
+      get: jasmine.createSpy('get').and.returnValue(of(ME)),
       update: jasmine
         .createSpy('update')
-        .and.resolveTo({ id: 'u1', name: 'Алексей Н.', email: 'new@example.com' }),
-      changePassword: jasmine.createSpy('changePassword').and.resolveTo(undefined),
-      deleteAccount: jasmine.createSpy('deleteAccount').and.resolveTo(undefined),
+        .and.returnValue(of({ id: 'u1', name: 'Алексей Н.', email: 'new@example.com' })),
+      changePassword: jasmine.createSpy('changePassword').and.returnValue(of(undefined)),
+      deleteAccount: jasmine.createSpy('deleteAccount').and.returnValue(of(undefined)),
     };
     settings = {
-      get: jasmine.createSpy('get').and.resolveTo({ ...SAVED }),
+      get: jasmine.createSpy('get').and.returnValue(of({ ...SAVED })),
       update: jasmine
         .createSpy('update')
-        .and.callFake((params: Partial<Settings>) => Promise.resolve({ ...SAVED, ...params })),
+        .and.callFake((params: Partial<Settings>) => of({ ...SAVED, ...params })),
     };
     auth = {
-      loadMe: jasmine.createSpy('loadMe').and.resolveTo(ME),
-      logout: jasmine.createSpy('logout').and.resolveTo(undefined),
+      loadMe: jasmine.createSpy('loadMe').and.returnValue(of(ME)),
+      logout: jasmine.createSpy('logout').and.returnValue(of(undefined)),
     };
 
     fixture = TestBed.configureTestingModule({
@@ -94,6 +95,27 @@ describe('SettingsComponent', () => {
     expect(component.notificationsEnabled()).toBeFalse();
   });
 
+  it('блок загрузки показывает спиннер до ответа и исчезает после', async () => {
+    const profile$ = new Subject<UserDto>();
+    const settings$ = new Subject<Settings>();
+    profile.get.and.returnValue(profile$.asObservable());
+    settings.get.and.returnValue(settings$.asObservable());
+
+    fixture.detectChanges();
+    const loadingBlock = fixture.nativeElement.querySelector('[data-test="settings-loading"]');
+    expect(loadingBlock).not.toBeNull();
+    expect(loadingBlock?.querySelector('app-spinner')).not.toBeNull();
+
+    profile$.next(ME);
+    profile$.complete();
+    settings$.next({ ...SAVED });
+    settings$.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-test="settings-loading"]')).toBeNull();
+  });
+
   it('сохранение профиля: update, loadMe и уведомление «Сохранено»', async () => {
     await init();
     component.profileForm.setValue({ name: 'Алексей Н.', email: 'new@example.com' });
@@ -118,7 +140,7 @@ describe('SettingsComponent', () => {
   it('отказ update профиля показывается дословно', async () => {
     await init();
     profile.update.and.returnValue(
-      Promise.reject({ status: 409, body: { message: 'Пользователь с таким email уже существует' } }),
+      throwError(() => ({ status: 409, body: { message: 'Пользователь с таким email уже существует' } })),
     );
     component.profileForm.setValue({ name: 'Алексей', email: 'petr@example.com' });
 

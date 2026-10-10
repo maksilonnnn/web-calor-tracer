@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
+import { of, throwError } from 'rxjs';
 
 import { ApiError, UserDto } from '../../../../shared/models';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -34,7 +35,7 @@ describe('RegisterComponent', () => {
   };
 
   beforeEach(() => {
-    auth = { register: jasmine.createSpy('register').and.resolveTo(ME) };
+    auth = { register: jasmine.createSpy('register').and.returnValue(of(ME)) };
 
     fixture = TestBed.configureTestingModule({
       imports: [RegisterComponent],
@@ -78,8 +79,8 @@ describe('RegisterComponent', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
-  it('отказ мока (занятый email) показывается дословно', async () => {
-    auth.register.and.returnValue(Promise.reject(TAKEN));
+  it('отказ бэкенда (занятый email) показывается дословно', async () => {
+    auth.register.and.returnValue(throwError(() => TAKEN));
     component.form.setValue(VALID);
 
     await component.onSubmit();

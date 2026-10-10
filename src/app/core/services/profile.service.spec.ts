@@ -1,54 +1,93 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
-import { UserDto } from '../../shared/models';
-import { MockApiClient } from '../../mock/mock-api-client';
+import { ApiError, UserDto } from '../../shared/models';
+import { apiErrorInterceptor } from '../http/api-error.interceptor';
 import { ProfileService } from './profile.service';
 
 const ME: UserDto = { id: 'user-1', name: 'Алексей', email: 'alex@example.com' };
 
-describe('ProfileService — сервис домена Profile', () => {
+describe('ProfileService — сервис домена Profile (HttpClient)', () => {
   let service: ProfileService;
-  let client: MockApiClient;
+  let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    client = TestBed.inject(MockApiClient);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
     service = TestBed.inject(ProfileService);
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('get вызывает profile.get', async () => {
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(ME));
-    expect(await service.get()).toBe(ME);
-    expect(spy).toHaveBeenCalledWith('profile.get', null);
+  afterEach(() => http.verify());
+
+  it('get: GET me', () => {
+    let received: UserDto | undefined;
+    service.get().subscribe((value) => (received = value));
+
+    const request = http.expectOne('me');
+    expect(request.request.method).toBe('GET');
+    request.flush(ME);
+
+    expect(received).toEqual(ME);
   });
 
-  it('update передаёт имя и email', async () => {
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(ME));
+  it('update: PUT me с именем и email', () => {
     const params = { name: 'Алексей Н.', email: 'new@example.com' };
-    await service.update(params);
-    expect(spy).toHaveBeenCalledWith('profile.update', params);
+    let received: UserDto | undefined;
+    service.update(params).subscribe((value) => (received = value));
+
+    const request = http.expectOne('me');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(params);
+    request.flush({ id: 'user-1', ...params });
+
+    expect(received?.email).toBe('new@example.com');
   });
 
-  it('changePassword передаёт все три поля', async () => {
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(undefined));
+  it('changePassword: PUT me/password со всеми тремя полями', () => {
     const params = {
       currentPassword: 'Demo1234!',
       password: 'NewDemo1234!',
       confirmPassword: 'NewDemo1234!',
     };
-    await service.changePassword(params);
-    expect(spy).toHaveBeenCalledWith('profile.changePassword', params);
+    service.changePassword(params).subscribe();
+
+    const request = http.expectOne('me/password');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(params);
+    request.flush(null);
   });
 
-  it('deleteAccount вызывает profile.deleteAccount', async () => {
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(undefined));
-    await service.deleteAccount();
-    expect(spy).toHaveBeenCalledWith('profile.deleteAccount', null);
+  it('deleteAccount: DELETE me', () => {
+    service.deleteAccount().subscribe();
+
+    const request = http.expectOne('me');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(null);
   });
 
-  it('отказ мока пробрасывается как ApiError', async () => {
-    const apiError = { status: 409, body: { message: 'Пользователь с таким email уже существует' } };
-    spyOn(client, 'call').and.returnValue(Promise.reject(apiError));
-    await expectAsync(service.update({ name: 'A', email: 'a@b.c' })).toBeRejectedWith(apiError);
+  it('отказ бэкенда пробрасывается как ApiError', () => {
+    let error: ApiError | undefined;
+    service
+      .update({ name: 'A', email: 'a@b.c' })
+      .subscribe({ error: (value: ApiError) => (error = value) });
+
+    http.expectOne('me').flush(
+      { message: 'Пользователь с таким email уже существует' },
+      { status: 409, statusText: 'Conflict' },
+    );
+
+    expect(error?.status).toBe(409);
+    expect(error?.body.message).toBe('Пользователь с таким email уже существует');
   });
 });

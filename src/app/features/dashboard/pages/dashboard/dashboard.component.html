@@ -12,7 +12,10 @@
       </header>
 
       @if (loading()) {
-        <p class="dashboard-status" data-test="dashboard-loading">Загрузка…</p>
+        <div class="page-loading" data-test="dashboard-loading">
+          <app-spinner size="lg" label="Загрузка…" />
+          <p class="page-loading-text">Загрузка…</p>
+        </div>
       } @else {
         @if (data(); as d) {
         <!-- Статистика: калории + макронутриенты -->

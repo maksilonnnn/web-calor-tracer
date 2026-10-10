@@ -1,14 +1,15 @@
 import { registerLocaleData } from '@angular/common';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import localeRu from '@angular/common/locales/ru';
 import {
   ApplicationConfig,
   LOCALE_ID,
-  provideAppInitializer,
   provideZoneChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
-import { setupMockLayer } from '../../mock';
+import { apiErrorInterceptor } from '../http/api-error.interceptor';
+import { apiPrefixInterceptor } from '../http/api-prefix.interceptor';
 import { routes } from './app.routes';
 
 registerLocaleData(localeRu);
@@ -18,6 +19,6 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes),
     { provide: LOCALE_ID, useValue: 'ru' },
-    provideAppInitializer(() => setupMockLayer()),
+    provideHttpClient(withInterceptors([apiPrefixInterceptor, apiErrorInterceptor])),
   ],
 };

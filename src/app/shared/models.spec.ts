@@ -3,7 +3,6 @@ import {
   MEAL_TYPES,
   MEAL_TYPE_ICONS,
   MEAL_TYPE_LABELS,
-  MOCK_DELAY_MS,
   STORAGE_KEYS,
 } from './models';
 
@@ -12,10 +11,6 @@ describe('models — константы и словари', () => {
     for (const key of Object.values(STORAGE_KEYS)) {
       expect(key.startsWith('calorie-tracker.')).toBeTrue();
     }
-  });
-
-  it('MOCK_DELAY_MS = 500', () => {
-    expect(MOCK_DELAY_MS).toBe(500);
   });
 
   it('порядок приёмов пищи фиксирован: завтрак, обед, ужин, перекус', () => {

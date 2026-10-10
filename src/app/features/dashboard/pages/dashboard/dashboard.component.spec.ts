@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { of, Subject, throwError } from 'rxjs';
 
 import { ApiError, DashboardData, DEFAULT_SETTINGS, UserDto } from '../../../../shared/models';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -45,7 +46,7 @@ describe('DashboardComponent', () => {
   let notifyError: jasmine.Spy;
 
   beforeEach(() => {
-    dashboard = { getDay: jasmine.createSpy('getDay') };
+    dashboard = { getDay: jasmine.createSpy('getDay').and.returnValue(of(DATA)) };
 
     fixture = TestBed.configureTestingModule({
       imports: [DashboardComponent],
@@ -53,7 +54,10 @@ describe('DashboardComponent', () => {
         provideRouter([]),
         { provide: DashboardService, useValue: dashboard },
         { provide: AuthService, useValue: { currentUser: signal<UserDto | null>(ME).asReadonly() } },
-        { provide: SettingsService, useValue: { get: jasmine.createSpy('get').and.resolveTo(DEFAULT_SETTINGS) } },
+        {
+          provide: SettingsService,
+          useValue: { get: jasmine.createSpy('get').and.returnValue(of(DEFAULT_SETTINGS)) },
+        },
         { provide: DiaryService, useValue: { addFood: jasmine.createSpy('addFood') } },
       ],
     }).createComponent(DashboardComponent);
@@ -69,15 +73,14 @@ describe('DashboardComponent', () => {
   }
 
   it('показывает индикатор загрузки до ответа, затем данные', async () => {
-    let resolveDay: (value: DashboardData) => void = () => {};
-    dashboard.getDay.and.returnValue(
-      new Promise<DashboardData>((resolve) => (resolveDay = resolve)),
-    );
+    const day = new Subject<DashboardData>();
+    dashboard.getDay.and.returnValue(day.asObservable());
 
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-test="dashboard-loading"]')).not.toBeNull();
 
-    resolveDay(DATA);
+    day.next(DATA);
+    day.complete();
     await fixture.whenStable();
     fixture.detectChanges();
 
@@ -85,8 +88,26 @@ describe('DashboardComponent', () => {
     expect(component.data()?.totalCalories).toBe(3000);
   });
 
+  it('блок загрузки показывает спиннер до ответа и исчезает после', async () => {
+    const day = new Subject<DashboardData>();
+    dashboard.getDay.and.returnValue(day.asObservable());
+
+    fixture.detectChanges();
+    const loadingBlock = fixture.nativeElement.querySelector(
+      '[data-test="dashboard-loading"]',
+    );
+    expect(loadingBlock).not.toBeNull();
+    expect(loadingBlock?.querySelector('app-spinner')).not.toBeNull();
+
+    day.next(DATA);
+    day.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-test="dashboard-loading"]')).toBeNull();
+  });
+
   it('приветствие содержит имя пользователя, данные и нормы отрисованы', async () => {
-    dashboard.getDay.and.resolveTo(DATA);
     await init();
 
     expect(component.greeting()).toContain('Алексей');
@@ -98,9 +119,9 @@ describe('DashboardComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('из 2500 ккал');
   });
 
-  it('отказ мока показывается уведомлением, загрузка снимается', async () => {
+  it('отказ бэкенда показывается уведомлением, загрузка снимается', async () => {
     const error: ApiError = { status: 401, body: { message: 'Не авторизован' } };
-    dashboard.getDay.and.returnValue(Promise.reject(error));
+    dashboard.getDay.and.returnValue(throwError(() => error));
     await init();
 
     expect(notifyError).toHaveBeenCalledWith('Не авторизован');
@@ -109,7 +130,6 @@ describe('DashboardComponent', () => {
   });
 
   it('кнопка «Добавить еду» открывает модалку', async () => {
-    dashboard.getDay.and.resolveTo(DATA);
     await init();
 
     (fixture.nativeElement.querySelector('[data-test="add-food-button"]') as HTMLElement).click();
@@ -119,7 +139,6 @@ describe('DashboardComponent', () => {
   });
 
   it('после добавления еды модалка закрывается и данные перезагружаются', async () => {
-    dashboard.getDay.and.resolveTo(DATA);
     await init();
     component.openAddFoodModal();
 

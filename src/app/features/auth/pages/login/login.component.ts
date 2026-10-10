@@ -1,11 +1,12 @@
 /**
  * Страница входа (/login): реактивная форма email + пароль, стиль как у
- * регистрации. Успех — переход на домашний маршрут; отказ мока показывается
- * дословно через NotificationService.
+ * регистрации. Успех — переход на домашний маршрут; отказ бэкенда
+ * показывается дословно через NotificationService.
  */
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { toApiError } from '../../../../shared/api-error';
@@ -51,7 +52,7 @@ export class LoginComponent {
     const input = this.form.getRawValue();
     await this.submitState.run(async () => {
       try {
-        await this.auth.login(input);
+        await firstValueFrom(this.auth.login(input));
         await this.router.navigate(['/']);
       } catch (error) {
         this.notifications.notifyError(toApiError(error).body.message);

@@ -1,6 +1,7 @@
 /**
  * Общие модели DTO и константы приложения — единый словарь типов для
- * сервисов core, мок-слоя и страниц (аналог эталонного приложения).
+ * сервисов core и страниц (аналог эталонного приложения). Типы совпадают с
+ * контрактами REST API (`/api/v1`).
  *
  * Идентификаторы всех сущностей — строки (uuid). Даты хранятся и
  * передаются строкой 'YYYY-MM-DD' (локальная дата, без UTC-сдвига);
@@ -103,9 +104,77 @@ export interface UserDto {
   email: string;
 }
 
-/** Ошибка мок-вызова — эмуляция HTTP-ответа с телом ошибки. */
+/** Параметры auth.login. */
+export interface LoginParams {
+  email: string;
+  password: string;
+}
+
+/** Параметры auth.register. */
+export interface RegisterParams {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+/** Пищевая ценность нового продукта (на 100 г) — без id: его присваивает бэкенд. */
+export interface FoodInput {
+  name: string;
+  calories: number;
+  protein: number;
+  fat: number;
+  carbs: number;
+  category?: string;
+}
+
+/** Параметры diary.addFood. */
+export interface DiaryAddFoodParams {
+  date: string;
+  mealType: MealType;
+  product: FoodInput;
+  /** Количество в граммах. */
+  quantity: number;
+}
+
+/** Параметры diary.updateItem: новое количество и данные продукта (на 100 г). */
+export interface DiaryUpdateItemParams {
+  /** Количество в граммах. */
+  quantity: number;
+  product: FoodInput;
+}
+
+/** Параметры settings.update: частичное обновление. */
+export interface SettingsUpdateParams {
+  weightUnit?: WeightUnit;
+  notificationsEnabled?: boolean;
+}
+
+/** Параметры profile.update. */
+export interface ProfileUpdateParams {
+  name: string;
+  email: string;
+}
+
+/** Параметры profile.changePassword. */
+export interface ProfileChangePasswordParams {
+  currentPassword: string;
+  password: string;
+  confirmPassword: string;
+}
+
+/** Страница выборки: { items, page, pageSize, totalCount, totalPages }. */
+export interface PagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+/** Ошибка HTTP-вызова — транспортная форма отказа бэкенда. */
 export interface ApiError {
-  /** Эмулируемый HTTP-код: 400/401/404/409. */
+  /** HTTP-код ответа: 400/401/404/409 (0 — сетевой сбой). */
   status: number;
   body: {
     /** Текст ошибки; показывается пользователю дословно. */
@@ -132,12 +201,7 @@ export const MEAL_TYPE_ICONS: Record<MealType, string> = {
   snack: '🍎',
 };
 
-/** Ключи хранилищ браузера: данные мока, сессия и тема оформления. */
+/** Ключи хранилищ браузера: тема оформления. */
 export const STORAGE_KEYS = {
-  mockDb: 'calorie-tracker.mock.db.v1',
-  session: 'calorie-tracker.session.userId',
   theme: 'calorie-tracker.theme',
 } as const;
-
-/** Задержка мок-вызовов в миллисекундах — имитация бэкенда. */
-export const MOCK_DELAY_MS = 500;

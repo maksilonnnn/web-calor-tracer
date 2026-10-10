@@ -46,7 +46,7 @@
             type="submit"
             size="lg"
             fullWidth
-            [disabled]="submitState.busy()"
+            [loading]="submitState.busy()"
             data-test="register-submit"
           >
             @if (submitState.busy()) {

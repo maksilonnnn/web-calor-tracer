@@ -1,6 +1,6 @@
 /**
  * Дашборд (/) — агрегат дня из DashboardService: итоги, разбивка по приёмам
- * пищи, недавние продукты и дневные нормы считает мок. Приветствие и
+ * пищи, недавние продукты и дневные нормы считает бэкенд. Приветствие и
  * подпись даты формируются на странице. Добавление еды — через модалку;
  * после успеха итоги перезагружаются.
  */
@@ -14,6 +14,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { DashboardService } from '../../../../core/services/dashboard.service';
@@ -21,6 +22,7 @@ import { toApiError } from '../../../../shared/api-error';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { CardComponent } from '../../../../shared/components/card/card.component';
 import { ProgressBarComponent } from '../../../../shared/components/progress-bar/progress-bar.component';
+import { SpinnerComponent } from '../../../../shared/components/spinner/spinner.component';
 import { todayIso } from '../../../../shared/dates';
 import { DashboardData, MEAL_TYPE_ICONS, MEAL_TYPE_LABELS } from '../../../../shared/models';
 import { NotificationService } from '../../../../shared/notifications/notification-service';
@@ -34,6 +36,7 @@ import { AddFoodModalComponent } from '../../components/add-food-modal/add-food-
     ButtonComponent,
     CardComponent,
     ProgressBarComponent,
+    SpinnerComponent,
     AddFoodModalComponent,
   ],
   templateUrl: './dashboard.component.html',
@@ -92,7 +95,7 @@ export class DashboardComponent implements OnInit {
   private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      this.data.set(await this.dashboard.getDay(todayIso()));
+      this.data.set(await firstValueFrom(this.dashboard.getDay(todayIso())));
     } catch (error) {
       this.notifications.notifyError(toApiError(error).body.message);
     } finally {

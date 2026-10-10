@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
 import { Router, provideRouter } from '@angular/router';
+import { of, throwError } from 'rxjs';
 
 import { ApiError, UserDto } from '../../../../shared/models';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -23,7 +24,7 @@ describe('LoginComponent', () => {
   let notifyError: jasmine.Spy;
 
   beforeEach(() => {
-    auth = { login: jasmine.createSpy('login').and.resolveTo(ME) };
+    auth = { login: jasmine.createSpy('login').and.returnValue(of(ME)) };
 
     fixture = TestBed.configureTestingModule({
       imports: [LoginComponent],
@@ -59,8 +60,8 @@ describe('LoginComponent', () => {
     expect(notifyError).not.toHaveBeenCalled();
   });
 
-  it('отказ мока: текст ошибки показывается дословно', async () => {
-    auth.login.and.returnValue(Promise.reject(WRONG));
+  it('отказ бэкенда: текст ошибки показывается дословно', async () => {
+    auth.login.and.returnValue(throwError(() => WRONG));
     component.form.setValue({ email: 'alex@example.com', password: 'неверный' });
 
     await component.onSubmit();

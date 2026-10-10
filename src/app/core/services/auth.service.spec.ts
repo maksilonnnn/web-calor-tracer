@@ -1,129 +1,122 @@
-import { TestBed } from '@angular/core/testing';
-import { fakeAsync, tick } from '@angular/core/testing';
-
-import { ApiError, STORAGE_KEYS, UserDto } from '../../shared/models';
-import { registerAuthHandlers } from '../../mock/auth/handlers';
-import { SessionStore } from '../../mock/auth/session-store';
-import { MockApiClient } from '../../mock/mock-api-client';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
-  MockDbData,
-  configureMockDbSeed,
-  emptyMockDbData,
-  resetMockDbSeed,
-} from '../../mock/mock-db';
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+
+import { ApiError, UserDto } from '../../shared/models';
+import { apiErrorInterceptor } from '../http/api-error.interceptor';
 import { AuthService } from './auth.service';
 
-const ALEX_ID = 'user-0001';
+const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com' };
 
-function makeSeed(): MockDbData {
-  return {
-    ...emptyMockDbData(),
-    users: [{ id: ALEX_ID, name: 'Алексей', email: 'alex@example.com', password: 'Demo1234!' }],
-  };
-}
-
-function capture<T>(promise: Promise<T>): { value?: T; error?: unknown } {
-  const box: { value?: T; error?: unknown } = {};
-  promise.then(
-    (value) => (box.value = value),
-    (error: unknown) => (box.error = error),
-  );
-  return box;
-}
-
-describe('AuthService — сервис домена Auth', () => {
+describe('AuthService — сервис домена Auth (HttpClient)', () => {
   let service: AuthService;
-  let session: SessionStore;
+  let http: HttpTestingController;
 
   beforeEach(() => {
-    localStorage.clear();
-    resetMockDbSeed();
-    configureMockDbSeed(() => structuredClone(makeSeed()));
-    TestBed.configureTestingModule({});
-    registerAuthHandlers(TestBed.inject(MockApiClient));
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
     service = TestBed.inject(AuthService);
-    session = TestBed.inject(SessionStore);
+    http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => {
-    localStorage.clear();
-    resetMockDbSeed();
-  });
+  afterEach(() => http.verify());
 
-  it('currentUser изначально null, isAuthenticated — по ключу сессии', () => {
+  it('currentUser изначально null', () => {
     expect(service.currentUser()).toBeNull();
-    expect(service.isAuthenticated()).toBeFalse();
-    session.setUserId(ALEX_ID);
-    expect(service.isAuthenticated()).toBeTrue();
   });
 
-  it('login успех: сессия и кэш currentUser заполнены', fakeAsync(() => {
-    const box = capture(service.login({ email: 'alex@example.com', password: 'Demo1234!' }));
-    tick(500);
-    expect(box.value).toEqual({ id: ALEX_ID, name: 'Алексей', email: 'alex@example.com' });
-    expect(service.currentUser()).toEqual(box.value as UserDto);
-    expect(service.isAuthenticated()).toBeTrue();
-  }));
+  it('login: POST auth/login, кэш currentUser заполнен', () => {
+    let received: UserDto | undefined;
+    service.login({ email: 'alex@example.com', password: 'Demo1234!' }).subscribe({
+      next: (value) => (received = value),
+    });
 
-  it('login отказ: ApiError, кэш и сессия пусты', fakeAsync(() => {
-    const box = capture(service.login({ email: 'alex@example.com', password: 'неверный' }));
-    tick(500);
-    expect((box.error as ApiError).status).toBe(401);
+    const request = http.expectOne('auth/login');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ email: 'alex@example.com', password: 'Demo1234!' });
+    request.flush(ME);
+
+    expect(received).toEqual(ME);
+    expect(service.currentUser()).toEqual(ME);
+  });
+
+  it('login отказ: ApiError 401, кэш пуст', () => {
+    let error: ApiError | undefined;
+    service.login({ email: 'alex@example.com', password: 'неверный' }).subscribe({
+      error: (value: ApiError) => (error = value),
+    });
+
+    http
+      .expectOne('auth/login')
+      .flush({ message: 'Неверный email или пароль' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(error?.status).toBe(401);
+    expect(error?.body.message).toBe('Неверный email или пароль');
     expect(service.currentUser()).toBeNull();
-    expect(service.isAuthenticated()).toBeFalse();
-  }));
+  });
 
-  it('register успех: пользователь создан, сессия и кэш заполнены', fakeAsync(() => {
-    const box = capture(
-      service.register({
+  it('register: POST auth/register, кэш заполнен', () => {
+    let received: UserDto | undefined;
+    service
+      .register({
         name: 'Пётр',
         email: 'petr@example.com',
         password: 'Demo1234!',
         confirmPassword: 'Demo1234!',
-      }),
-    );
-    tick(500);
-    expect(box.value?.email).toBe('petr@example.com');
-    expect(service.currentUser()?.email).toBe('petr@example.com');
-    expect(service.isAuthenticated()).toBeTrue();
-  }));
+      })
+      .subscribe({ next: (value) => (received = value) });
 
-  it('logout очищает сессию и кэш', fakeAsync(() => {
-    session.setUserId(ALEX_ID);
-    const login = capture(service.login({ email: 'alex@example.com', password: 'Demo1234!' }));
-    tick(500);
+    const request = http.expectOne('auth/register');
+    expect(request.request.method).toBe('POST');
+    request.flush({ id: 'u2', name: 'Пётр', email: 'petr@example.com' });
+
+    expect(received?.email).toBe('petr@example.com');
+    expect(service.currentUser()?.email).toBe('petr@example.com');
+  });
+
+  it('logout: POST auth/logout, кэш очищен', () => {
+    service.login({ email: 'alex@example.com', password: 'Demo1234!' }).subscribe();
+    http.expectOne('auth/login').flush(ME);
     expect(service.currentUser()).not.toBeNull();
 
-    const logout = capture(service.logout());
-    tick(500);
-    expect(logout.value).toBeUndefined();
-    expect(service.currentUser()).toBeNull();
-    expect(session.hasUser()).toBeFalse();
-  }));
+    service.logout().subscribe();
+    const request = http.expectOne('auth/logout');
+    expect(request.request.method).toBe('POST');
+    request.flush(null);
 
-  it('loadMe без сессии возвращает null и не трогает кэш', fakeAsync(() => {
-    const box = capture(service.loadMe());
-    tick(500);
-    expect(box.value).toBeNull();
     expect(service.currentUser()).toBeNull();
-    expect(localStorage.getItem(STORAGE_KEYS.session)).toBeNull();
-  }));
+  });
 
-  it('loadMe с сессией загружает пользователя в кэш', fakeAsync(() => {
-    session.setUserId(ALEX_ID);
-    const box = capture(service.loadMe());
-    tick(500);
-    expect(box.value?.id).toBe(ALEX_ID);
-    expect(service.currentUser()?.name).toBe('Алексей');
-  }));
+  it('loadMe: GET auth/me и кэш', () => {
+    let received: UserDto | null = null as UserDto | null;
+    service.loadMe().subscribe({ next: (value) => (received = value) });
 
-  it('loadMe с битой сессией очищает её и возвращает null', fakeAsync(() => {
-    session.setUserId('ghost-user');
-    const box = capture(service.loadMe());
-    tick(500);
-    expect(box.value).toBeNull();
-    expect(box.error).toBeUndefined();
+    const request = http.expectOne('auth/me');
+    expect(request.request.method).toBe('GET');
+    request.flush(ME);
+
+    expect(received).toEqual(ME);
+    expect(service.currentUser()).toEqual(ME);
+  });
+
+  it('loadMe при 401 возвращает null и сбрасывает кэш', () => {
+    let received: UserDto | null = ME;
+    service.loadMe().subscribe({ next: (value) => (received = value) });
+
+    http
+      .expectOne('auth/me')
+      .flush({ message: 'Не авторизован' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(received).toBeNull();
     expect(service.currentUser()).toBeNull();
-    expect(session.hasUser()).toBeFalse();
-  }));
+  });
 });

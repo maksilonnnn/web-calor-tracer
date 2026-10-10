@@ -20,7 +20,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 
 import { DiaryService } from '../../../../core/services/diary.service';
 import { SettingsService } from '../../../../core/services/settings.service';
@@ -29,6 +29,7 @@ import { calculateNutrition } from '../../../../shared/calculations';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
 import { InputComponent } from '../../../../shared/components/input/input.component';
 import { ModalComponent } from '../../../../shared/components/modal/modal.component';
+import { SpinnerComponent } from '../../../../shared/components/spinner/spinner.component';
 import { todayIso } from '../../../../shared/dates';
 import { submitting } from '../../../../shared/loading/submitting';
 import { MealType, Product, WeightUnit } from '../../../../shared/models';
@@ -68,7 +69,7 @@ function round3(value: number): number {
 
 @Component({
   selector: 'app-add-food-modal',
-  imports: [ReactiveFormsModule, ModalComponent, InputComponent, ButtonComponent],
+  imports: [ReactiveFormsModule, ModalComponent, InputComponent, ButtonComponent, SpinnerComponent],
   templateUrl: './add-food-modal.component.html',
   styleUrl: './add-food-modal.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -108,6 +109,9 @@ export class AddFoodModalComponent implements OnInit {
   protected readonly unitLabel = computed(() => weightUnitLabel(this.unit()));
   protected readonly step = computed(() => quantityStep(this.unit()));
 
+  /** true, пока настройки (единица веса) не загружены: количество и отправка заблокированы. */
+  protected readonly unitLoading = signal(true);
+
   protected readonly form = new FormGroup({
     mealType: new FormControl<MealType>('breakfast', { nonNullable: true }),
     name: new FormControl('', { nonNullable: true, validators: [requiredTrim(), productName()] }),
@@ -142,11 +146,15 @@ export class AddFoodModalComponent implements OnInit {
     },
   );
 
-  protected readonly previewQuantityGrams = computed(() =>
-    toGrams(toNumber(this.formValue().quantity), this.unit()),
+  protected readonly previewQuantityGrams = computed<number | null>(() =>
+    this.unitLoading() ? null : toGrams(toNumber(this.formValue().quantity), this.unit()),
   );
 
   protected readonly previewNutrition = computed(() => {
+    if (this.unitLoading()) {
+      // Единица ещё не загружена — итог не считается, в шаблоне нейтральное «—».
+      return null;
+    }
     const value = this.formValue();
     const product: Product = {
       id: '',
@@ -157,17 +165,19 @@ export class AddFoodModalComponent implements OnInit {
       carbs: toNumber(value.carbs),
       category: value.category,
     };
-    return calculateNutrition(product, this.previewQuantityGrams());
+    return calculateNutrition(product, this.previewQuantityGrams() ?? 0);
   });
 
   private readonly today = todayIso();
 
   async ngOnInit(): Promise<void> {
     try {
-      const settings = await this.settingsService.get();
+      const settings = await firstValueFrom(this.settingsService.get());
       this.unit.set(settings.weightUnit);
     } catch {
       // Не удалось получить настройки — остаёмся на граммах по умолчанию.
+    } finally {
+      this.unitLoading.set(false);
     }
   }
 
@@ -176,11 +186,17 @@ export class AddFoodModalComponent implements OnInit {
   }
 
   protected increment(): void {
+    if (this.unitLoading()) {
+      return;
+    }
     const current = toNumber(this.form.controls.quantity.value);
     this.form.controls.quantity.setValue(round3(current + this.step()));
   }
 
   protected decrement(): void {
+    if (this.unitLoading()) {
+      return;
+    }
     const current = toNumber(this.form.controls.quantity.value);
     this.form.controls.quantity.setValue(round3(Math.max(0, current - this.step())));
   }
@@ -210,6 +226,10 @@ export class AddFoodModalComponent implements OnInit {
   }
 
   async handleAdd(): Promise<void> {
+    if (this.unitLoading()) {
+      // Единица ещё не загружена: перевод количества в граммы может быть неверным.
+      return;
+    }
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.notifications.notifyError(INVALID_FORM_MESSAGE);
@@ -220,19 +240,21 @@ export class AddFoodModalComponent implements OnInit {
     const quantity = toGrams(toNumber(value.quantity), this.unit());
     await this.submitState.run(async () => {
       try {
-        await this.diary.addFood({
-          date: this.today,
-          mealType: value.mealType,
-          product: {
-            name: value.name,
-            calories: toNumber(value.calories),
-            protein: toNumber(value.protein),
-            fat: toNumber(value.fat),
-            carbs: toNumber(value.carbs),
-            category: value.category,
-          },
-          quantity,
-        });
+        await firstValueFrom(
+          this.diary.addFood({
+            date: this.today,
+            mealType: value.mealType,
+            product: {
+              name: value.name,
+              calories: toNumber(value.calories),
+              protein: toNumber(value.protein),
+              fat: toNumber(value.fat),
+              carbs: toNumber(value.carbs),
+              category: value.category,
+            },
+            quantity,
+          }),
+        );
         this.notifications.notifySuccess('Сохранено');
         this.form.reset();
         this.added.emit();

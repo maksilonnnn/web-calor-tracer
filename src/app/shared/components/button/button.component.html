@@ -2,7 +2,11 @@
       [type]="type()"
       [class]="'btn ' + variant() + ' ' + size()"
       [class.full-width]="fullWidth()"
-      [disabled]="disabled()"
+      [disabled]="disabled() || loading()"
+      [attr.aria-busy]="loading() ? 'true' : null"
     >
+      @if (loading()) {
+        <app-spinner size="sm" />
+      }
       <ng-content></ng-content>
     </button>

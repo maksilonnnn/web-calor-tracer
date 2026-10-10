@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
+import { of, Subject, throwError } from 'rxjs';
 
 import {
   DEFAULT_SETTINGS,
@@ -55,18 +56,18 @@ const ENTRY: DiaryEntry = {
 describe('DiaryComponent', () => {
   let fixture: ComponentFixture<DiaryComponent>;
   let component: DiaryInternals;
-  let diary: { getDay: jasmine.Spy; updateQuantity: jasmine.Spy; removeItem: jasmine.Spy };
+  let diary: { getDay: jasmine.Spy; updateItem: jasmine.Spy; removeItem: jasmine.Spy };
   let settings: { get: jasmine.Spy };
   let notifySuccess: jasmine.Spy;
   let notifyError: jasmine.Spy;
 
   beforeEach(() => {
     diary = {
-      getDay: jasmine.createSpy('getDay').and.resolveTo(ENTRY),
-      updateQuantity: jasmine.createSpy('updateQuantity').and.resolveTo(ENTRY),
-      removeItem: jasmine.createSpy('removeItem').and.resolveTo(ENTRY),
+      getDay: jasmine.createSpy('getDay').and.returnValue(of(ENTRY)),
+      updateItem: jasmine.createSpy('updateItem').and.returnValue(of(ENTRY)),
+      removeItem: jasmine.createSpy('removeItem').and.returnValue(of(ENTRY)),
     };
-    settings = { get: jasmine.createSpy('get').and.resolveTo({ ...DEFAULT_SETTINGS }) };
+    settings = { get: jasmine.createSpy('get').and.returnValue(of({ ...DEFAULT_SETTINGS })) };
 
     fixture = TestBed.configureTestingModule({
       imports: [DiaryComponent],
@@ -99,6 +100,23 @@ describe('DiaryComponent', () => {
     expect(fixture.nativeElement.querySelector('[data-test="meal-item-i1"]')).not.toBeNull();
   });
 
+  it('блок загрузки показывает спиннер до ответа и исчезает после', async () => {
+    const day = new Subject<DiaryEntry>();
+    diary.getDay.and.returnValue(day.asObservable());
+
+    fixture.detectChanges();
+    const loadingBlock = fixture.nativeElement.querySelector('[data-test="diary-loading"]');
+    expect(loadingBlock).not.toBeNull();
+    expect(loadingBlock?.querySelector('app-spinner')).not.toBeNull();
+
+    day.next(ENTRY);
+    day.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-test="diary-loading"]')).toBeNull();
+  });
+
   it('смена даты перезагружает день', async () => {
     await init();
     const event = { target: { value: '2026-02-02' } } as unknown as Event;
@@ -111,7 +129,7 @@ describe('DiaryComponent', () => {
   });
 
   it('отказ загрузки показывается уведомлением', async () => {
-    diary.getDay.and.returnValue(Promise.reject({ status: 401, body: { message: 'Не авторизован' } }));
+    diary.getDay.and.returnValue(throwError(() => ({ status: 401, body: { message: 'Не авторизован' } })));
     await init();
 
     expect(notifyError).toHaveBeenCalledWith('Не авторизован');
@@ -119,7 +137,7 @@ describe('DiaryComponent', () => {
   });
 
   it('редактирование в кг: количество показывается и отправляется в граммах', async () => {
-    settings.get.and.resolveTo({ ...DEFAULT_SETTINGS, weightUnit: 'kg' });
+    settings.get.and.returnValue(of({ ...DEFAULT_SETTINGS, weightUnit: 'kg' }));
     await init();
 
     component.openEditModal(ITEM);
@@ -127,7 +145,46 @@ describe('DiaryComponent', () => {
 
     await component.saveEdit();
 
-    expect(diary.updateQuantity).toHaveBeenCalledWith('i1', 150);
+    expect(diary.updateItem).toHaveBeenCalledWith('i1', {
+      quantity: 150,
+      product: {
+        name: 'Яблоко',
+        calories: 52,
+        protein: 0.3,
+        fat: 0.2,
+        carbs: 14,
+        category: 'Фрукты',
+      },
+    });
+    expect(notifySuccess).toHaveBeenCalledWith('Сохранено');
+  });
+
+  it('редактирование пищевой ценности отправляет новые значения', async () => {
+    await init();
+    component.openEditModal(ITEM);
+    const form = component.editForm.controls;
+    expect(form['name'].value).toBe('Яблоко');
+    expect(form['calories'].value).toBe(52);
+    expect(form['protein'].value).toBe(0.3);
+
+    form['name'].setValue('Груша');
+    form['calories'].setValue(70);
+    form['protein'].setValue(2);
+    form['carbs'].setValue(20);
+
+    await component.saveEdit();
+
+    expect(diary.updateItem).toHaveBeenCalledWith('i1', {
+      quantity: 150,
+      product: {
+        name: 'Груша',
+        calories: 70,
+        protein: 2,
+        fat: 0.2,
+        carbs: 20,
+        category: 'Фрукты',
+      },
+    });
     expect(notifySuccess).toHaveBeenCalledWith('Сохранено');
   });
 
@@ -149,6 +206,6 @@ describe('DiaryComponent', () => {
     await component.saveEdit();
 
     expect(notifyError).toHaveBeenCalledWith('Данные заполнены неверно');
-    expect(diary.updateQuantity).not.toHaveBeenCalled();
+    expect(diary.updateItem).not.toHaveBeenCalled();
   });
 });

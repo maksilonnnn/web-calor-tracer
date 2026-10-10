@@ -1,0 +1,11 @@
+<span
+      class="spinner"
+      [class.sm]="size() === 'sm'"
+      [class.md]="size() === 'md'"
+      [class.lg]="size() === 'lg'"
+      role="status"
+      aria-live="polite"
+      [attr.aria-label]="label()"
+    >
+      <span class="sr-only">{{ label() }}</span>
+    </span>

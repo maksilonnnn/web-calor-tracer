@@ -1,6 +1,10 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 
+import { UserDto } from '../../shared/models';
+import { AuthService } from '../../core/services/auth.service';
 import { AppShellComponent } from './app-shell.component';
 
 describe('AppShellComponent — авторизованная оболочка', () => {
@@ -11,7 +15,16 @@ describe('AppShellComponent — авторизованная оболочка', 
   it('рендерит сайдбар и область контента с router-outlet', () => {
     const fixture = TestBed.configureTestingModule({
       imports: [AppShellComponent],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        {
+          provide: AuthService,
+          useValue: {
+            currentUser: signal<UserDto | null>(null).asReadonly(),
+            logout: () => of(undefined),
+          },
+        },
+      ],
     }).createComponent(AppShellComponent);
     fixture.detectChanges();
 

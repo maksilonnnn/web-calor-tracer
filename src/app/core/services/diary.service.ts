@@ -1,41 +1,42 @@
 /**
  * DiaryService — сервис домена Diary для страниц: чтение дня, добавление
- * продукта, изменение количества и удаление позиции поверх MockApiClient.
- * Все данные дня считает мок; страница только отображает результат вызова.
+ * продукта, изменение позиции (количество + данные продукта) и удаление.
+ * Работает поверх HttpClient; REST см. `/api/v1/diary`.
  *
  * Контракт addFood: { date, mealType, product: FoodInput, quantity }, где
- * quantity — всегда в граммах, а product — без id (его присваивает мок).
+ * quantity — всегда в граммах, а product — без id (его присваивает бэкенд).
  */
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 
-import { DiaryEntry } from '../../shared/models';
-import { DiaryAddFoodParams, FoodInput } from '../../mock/diary/handlers';
-import { MockApiClient } from '../../mock/mock-api-client';
+import { DiaryAddFoodParams, DiaryEntry, DiaryUpdateItemParams, FoodInput } from '../../shared/models';
 
 /** Типы контракта Diary, потребляемые страницами и модалкой. */
-export type { DiaryAddFoodParams, FoodInput };
+export type { DiaryAddFoodParams, DiaryUpdateItemParams, FoodInput };
 
 @Injectable({ providedIn: 'root' })
 export class DiaryService {
-  private readonly client = inject(MockApiClient);
+  private readonly http = inject(HttpClient);
 
   /** Дневник за дату 'YYYY-MM-DD'; всегда четыре приёма пищи. */
-  getDay(date: string): Promise<DiaryEntry> {
-    return this.client.call<DiaryEntry>('diary.getDay', { date });
+  getDay(date: string): Observable<DiaryEntry> {
+    const params = new HttpParams().set('date', date);
+    return this.http.get<DiaryEntry>('diary', { params });
   }
 
   /** Добавление продукта в приём пищи; quantity — в граммах. */
-  addFood(params: DiaryAddFoodParams): Promise<DiaryEntry> {
-    return this.client.call<DiaryEntry>('diary.addFood', params);
+  addFood(params: DiaryAddFoodParams): Observable<DiaryEntry> {
+    return this.http.post<DiaryEntry>('diary/items', params);
   }
 
-  /** Изменение количества позиции; quantity — в граммах. */
-  updateQuantity(itemId: string, quantity: number): Promise<DiaryEntry> {
-    return this.client.call<DiaryEntry>('diary.updateQuantity', { itemId, quantity });
+  /** Изменение позиции: количество и данные продукта на 100 г; quantity — в граммах. */
+  updateItem(itemId: string, params: DiaryUpdateItemParams): Observable<DiaryEntry> {
+    return this.http.put<DiaryEntry>(`diary/items/${itemId}`, params);
   }
 
   /** Удаление позиции по id. */
-  removeItem(itemId: string): Promise<DiaryEntry> {
-    return this.client.call<DiaryEntry>('diary.removeItem', { itemId });
+  removeItem(itemId: string): Observable<DiaryEntry> {
+    return this.http.delete<DiaryEntry>(`diary/items/${itemId}`);
   }
 }

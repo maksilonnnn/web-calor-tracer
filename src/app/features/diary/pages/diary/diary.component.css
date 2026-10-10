@@ -23,7 +23,16 @@
       color: var(--text-secondary);
       margin: 4px 0 0 0;
     }
-    .diary-status {
+    /* Блок загрузки страницы */
+    .page-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 48px 0;
+    }
+    .page-loading-text {
       font-size: 14px;
       color: var(--text-secondary);
       margin: 0;
@@ -185,12 +194,6 @@
       flex-direction: column;
       gap: 16px;
     }
-    .modal-product-name {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin: 0;
-    }
     .modal-text {
       font-size: 14px;
       color: var(--text-secondary);
@@ -200,4 +203,48 @@
       display: flex;
       gap: 12px;
       margin-top: 4px;
+    }
+
+    /* Форма редактирования блюда */
+    .edit-food-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .form-block-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .group-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .select:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-ring);
     }
