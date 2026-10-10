@@ -1,8 +1,14 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import {
+  HttpTestingController,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
-import { DiaryEntry, MealType, MEAL_TYPES } from '../../shared/models';
-import { MockApiClient } from '../../mock/mock-api-client';
-import { DiaryService } from './diary.service';
+import { ApiError, DiaryEntry, MealType, MEAL_TYPES } from '../../shared/models';
+import { apiErrorInterceptor } from '../http/api-error.interceptor';
+import { DiaryAddFoodParams, DiaryService } from './diary.service';
 
 function emptyEntry(date: string): DiaryEntry {
   return {
@@ -12,53 +18,89 @@ function emptyEntry(date: string): DiaryEntry {
   };
 }
 
-describe('DiaryService — сервис домена Diary', () => {
+describe('DiaryService — сервис домена Diary (HttpClient)', () => {
   let service: DiaryService;
-  let client: MockApiClient;
+  let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    client = TestBed.inject(MockApiClient);
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([apiErrorInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
     service = TestBed.inject(DiaryService);
+    http = TestBed.inject(HttpTestingController);
   });
 
-  it('getDay вызывает diary.getDay с датой', async () => {
-    const entry = emptyEntry('2026-01-01');
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(entry));
+  afterEach(() => http.verify());
 
-    expect(await service.getDay('2026-01-01')).toBe(entry);
-    expect(spy).toHaveBeenCalledWith('diary.getDay', { date: '2026-01-01' });
+  it('getDay: GET diary с датой', () => {
+    const entry = emptyEntry('2026-01-01');
+    let received: DiaryEntry | undefined;
+    service.getDay('2026-01-01').subscribe((value) => (received = value));
+
+    const request = http.expectOne(
+      (req) => req.url === 'diary' && req.params.get('date') === '2026-01-01',
+    );
+    expect(request.request.method).toBe('GET');
+    request.flush(entry);
+
+    expect(received).toEqual(entry);
   });
 
-  it('addFood передаёт дату, приём, продукт без id и граммы', async () => {
+  it('addFood: POST diary/items с продуктом без id и граммами', () => {
     const entry = emptyEntry('2026-01-01');
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(entry));
-    const params = {
+    const params: DiaryAddFoodParams = {
       date: '2026-01-01',
-      mealType: 'breakfast' as MealType,
+      mealType: 'breakfast',
       product: { name: 'Яблоко', calories: 52, protein: 0.3, fat: 0.2, carbs: 14, category: 'Фрукты' },
       quantity: 150,
     };
+    let received: DiaryEntry | undefined;
+    service.addFood(params).subscribe((value) => (received = value));
 
-    expect(await service.addFood(params)).toBe(entry);
-    expect(spy).toHaveBeenCalledWith('diary.addFood', params);
+    const request = http.expectOne('diary/items');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual(params);
+    request.flush(entry);
+
+    expect(received).toEqual(entry);
   });
 
-  it('updateQuantity передаёт id позиции и граммы', async () => {
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(emptyEntry('d')));
-    await service.updateQuantity('item-1', 200);
-    expect(spy).toHaveBeenCalledWith('diary.updateQuantity', { itemId: 'item-1', quantity: 200 });
+  it('updateQuantity: PUT diary/items/{id} с граммами', () => {
+    let received: DiaryEntry | undefined;
+    service.updateQuantity('item-1', 200).subscribe((value) => (received = value));
+
+    const request = http.expectOne('diary/items/item-1');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual({ quantity: 200 });
+    request.flush(emptyEntry('d'));
+
+    expect(received).toBeDefined();
   });
 
-  it('removeItem передаёт id позиции', async () => {
-    const spy = spyOn(client, 'call').and.returnValue(Promise.resolve(emptyEntry('d')));
-    await service.removeItem('item-1');
-    expect(spy).toHaveBeenCalledWith('diary.removeItem', { itemId: 'item-1' });
+  it('removeItem: DELETE diary/items/{id}', () => {
+    let received: DiaryEntry | undefined;
+    service.removeItem('item-1').subscribe((value) => (received = value));
+
+    const request = http.expectOne('diary/items/item-1');
+    expect(request.request.method).toBe('DELETE');
+    request.flush(emptyEntry('d'));
+
+    expect(received).toBeDefined();
   });
 
-  it('отказ мока пробрасывается как ApiError', async () => {
-    const apiError = { status: 401, body: { message: 'Не авторизован' } };
-    spyOn(client, 'call').and.returnValue(Promise.reject(apiError));
-    await expectAsync(service.getDay('2026-01-01')).toBeRejectedWith(apiError);
+  it('отказ бэкенда пробрасывается как ApiError', () => {
+    let error: ApiError | undefined;
+    service.getDay('2026-01-01').subscribe({ error: (value: ApiError) => (error = value) });
+
+    http
+      .expectOne((req) => req.url === 'diary')
+      .flush({ message: 'Не авторизован' }, { status: 401, statusText: 'Unauthorized' });
+
+    expect(error?.status).toBe(401);
+    expect(error?.body.message).toBe('Не авторизован');
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Страница регистрации (/register): реактивная форма, вход после успеха.
  * Валидация — валидаторами shared/validation; тексты ошибок полей — только
- * из ERROR_TEXTS и показываются после touched. Отказы мока (занятый email)
+ * из ERROR_TEXTS и показываются после touched. Отказы бэкенда (занятый email)
  * показываются дословно через NotificationService.
  */
 import {
@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { toApiError } from '../../../../shared/api-error';
@@ -70,7 +71,7 @@ export class RegisterComponent {
     const input = this.form.getRawValue();
     await this.submitState.run(async () => {
       try {
-        await this.auth.register(input);
+        await firstValueFrom(this.auth.register(input));
         await this.router.navigate(['/']);
       } catch (error) {
         this.notifications.notifyError(toApiError(error).body.message);

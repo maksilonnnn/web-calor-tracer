@@ -14,6 +14,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 
 import { DiaryService } from '../../../../core/services/diary.service';
 import { SettingsService } from '../../../../core/services/settings.service';
@@ -98,7 +99,7 @@ export class DiaryComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const settings = await this.settingsService.get();
+      const settings = await firstValueFrom(this.settingsService.get());
       this.unit.set(settings.weightUnit);
     } catch {
       // Не удалось получить настройки — остаёмся на граммах по умолчанию.
@@ -154,7 +155,7 @@ export class DiaryComponent implements OnInit {
     const quantity = toGrams(toNumber(this.editForm.controls.quantity.value), this.unit());
     await this.editState.run(async () => {
       try {
-        this.entry.set(await this.diary.updateQuantity(item.id, quantity));
+        this.entry.set(await firstValueFrom(this.diary.updateQuantity(item.id, quantity)));
         this.notifications.notifySuccess('Сохранено');
         this.closeEditModal();
       } catch (error) {
@@ -178,7 +179,7 @@ export class DiaryComponent implements OnInit {
     }
     await this.deleteState.run(async () => {
       try {
-        this.entry.set(await this.diary.removeItem(item.id));
+        this.entry.set(await firstValueFrom(this.diary.removeItem(item.id)));
         this.notifications.notifySuccess('Удалено');
         this.closeDeleteModal();
       } catch (error) {
@@ -190,7 +191,7 @@ export class DiaryComponent implements OnInit {
   private async load(): Promise<void> {
     this.loading.set(true);
     try {
-      this.entry.set(await this.diary.getDay(this.selectedDate()));
+      this.entry.set(await firstValueFrom(this.diary.getDay(this.selectedDate())));
     } catch (error) {
       this.notifications.notifyError(toApiError(error).body.message);
     } finally {

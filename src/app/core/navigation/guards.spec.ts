@@ -6,6 +6,7 @@ import {
   RouterStateSnapshot,
   UrlTree,
 } from '@angular/router';
+import { Observable, of, throwError } from 'rxjs';
 
 import { UserDto } from '../../shared/models';
 import { AuthService } from '../services/auth.service';
@@ -16,20 +17,12 @@ const HOME = '/';
 const LOGIN = '/login';
 
 describe('navigation guards — доступ по сессии', () => {
-  let authenticated: boolean;
-  let current: UserDto | null;
   let loadMe: jasmine.Spy;
 
   beforeEach(() => {
-    authenticated = false;
-    current = null;
-    loadMe = jasmine.createSpy('loadMe');
+    loadMe = jasmine.createSpy('loadMe').and.returnValue(of(ME));
 
-    const auth = {
-      isAuthenticated: () => authenticated,
-      currentUser: () => current,
-      loadMe,
-    };
+    const auth = { loadMe };
     const router = {
       parseUrl: (url: string): UrlTree => url as unknown as UrlTree,
     };
@@ -48,65 +41,63 @@ describe('navigation guards — доступ по сессии', () => {
     );
   }
 
+  /** Ответ loadMe: авторизован (ME) или нет сессии (null). */
+  function reply(result: Observable<UserDto | null>): void {
+    loadMe.and.returnValue(result);
+  }
+
   describe('authGuard', () => {
-    it('без сессии — редирект на /login', async () => {
+    it('без сессии (loadMe → null) — редирект на /login', async () => {
+      reply(of(null));
+
       expect(await runGuard(authGuard)).toBe(LOGIN);
-      expect(loadMe).not.toHaveBeenCalled();
+      expect(loadMe).toHaveBeenCalledTimes(1);
     });
 
-    it('сессия есть, кэш заполнен — доступ без догрузки', async () => {
-      authenticated = true;
-      current = ME;
-      expect(await runGuard(authGuard)).toBeTrue();
-      expect(loadMe).not.toHaveBeenCalled();
-    });
-
-    it('сессия есть, кэш пуст — однократная догрузка loadMe', async () => {
-      authenticated = true;
-      loadMe.and.resolveTo(ME);
+    it('сессия есть — доступ разрешён', async () => {
       expect(await runGuard(authGuard)).toBeTrue();
       expect(loadMe).toHaveBeenCalledTimes(1);
     });
 
-    it('битая сессия (loadMe → null) — редирект на /login', async () => {
-      authenticated = true;
-      loadMe.and.resolveTo(null);
+    it('сбой загрузки сессии (сеть) — редирект на /login', async () => {
+      reply(throwError(() => new Error('нет сети')));
+
       expect(await runGuard(authGuard)).toBe(LOGIN);
     });
   });
 
   describe('guestGuard', () => {
     it('гость — доступ разрешён', async () => {
+      reply(of(null));
+
       expect(await runGuard(guestGuard)).toBeTrue();
     });
 
     it('авторизованный — редирект на домашний маршрут', async () => {
-      authenticated = true;
-      current = ME;
       expect(await runGuard(guestGuard)).toBe(HOME);
     });
 
-    it('авторизованный с пустым кэшем — догрузка, затем редирект домой', async () => {
-      authenticated = true;
-      loadMe.and.resolveTo(ME);
-      expect(await runGuard(guestGuard)).toBe(HOME);
+    it('сбой загрузки сессии — доступ разрешён (гость)', async () => {
+      reply(throwError(() => new Error('нет сети')));
+
+      expect(await runGuard(guestGuard)).toBeTrue();
     });
   });
 
   describe('homeGuard', () => {
     it('сессия есть — домашний маршрут', async () => {
-      authenticated = true;
-      current = ME;
       expect(await runGuard(homeGuard)).toBe(HOME);
     });
 
     it('сессии нет — /login', async () => {
+      reply(of(null));
+
       expect(await runGuard(homeGuard)).toBe(LOGIN);
     });
 
-    it('битая сессия — /login', async () => {
-      authenticated = true;
-      loadMe.and.resolveTo(null);
+    it('сбой загрузки сессии — /login', async () => {
+      reply(throwError(() => new Error('нет сети')));
+
       expect(await runGuard(homeGuard)).toBe(LOGIN);
     });
   });

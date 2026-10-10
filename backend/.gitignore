@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+
+# Root .gitignore ignores *.sln globally; keep the solution file tracked.
+!CalorieTracker.sln
+
+# User-specific / IDE files
+.vs/
+*.user
+*.suo
+.idea/
+
+# Local configuration with secrets (never commit real JwtKey).
+# The real JWT key is provided via user-secrets or the Auth__JwtKey
+# environment variable; appsettings.json keeps only a placeholder.
+appsettings.Local.json
+appsettings.*.Local.json
+*.secrets.json
+
+# Test / coverage artifacts
+[Tt]est[Rr]esult*/
+*.coverage
+*.coveragexml

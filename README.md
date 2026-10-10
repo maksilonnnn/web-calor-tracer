@@ -1,92 +1,256 @@
-# Calorie Tracker (Angular)
+# Трекер калорий — frontend (Angular) + backend (ASP.NET Core)
 
-Учебный frontend-прототип трекера калорий: регистрация и вход, дневник питания,
-сводка за день и настройки профиля. Бэкенда нет — вместо него детерминированный
-мок-слой на `localStorage`, полностью спрятанный за сервисами `core/services`.
+Учебный проект «Трекер калорий»: SPA на Angular 20 и REST API на C#/ASP.NET
+Core (net10.0) в стиле DDD. Backend хранит данные в **in-memory заглушке**
+(без реальной БД и EF Core), frontend общается с ним по HTTP; браузерного
+мок-слоя больше нет.
 
-Пользовательские сценарии ограничены пятью историями: см.
-[`docs/user-stories.md`](docs/user-stories.md).
+Репозиторий содержит обе части:
 
-## Стек
-
-- **Angular 20** (standalone-компоненты, signals, новый control flow)
-- **TypeScript 5.8** в строгом режиме (`strict`, `strictTemplates`, `noPropertyAccessFromIndexSignature`)
-- **RxJS 7.8**, `@angular/forms` (реактивные формы)
-- **Karma + Jasmine** для тестов (`ng test --watch=false --browsers=ChromeHeadless`)
-- Свои shared-компоненты; PrimeNG и другие UI-библиотеки **не** подключены
+- Angular-приложение — **в корне** репозитория (`src/`, `angular.json`, …);
+- backend — в каталоге **`backend/`** (`CalorieTracker.sln`: `CalorieTracker.Api` + `CalorieTracker.Tests`).
 
 ## Требования
 
-- **Node.js** 20.19+, 22.12+ или 24.x
-- **npm** 10+
-- Браузер Chrome или Edge (для headless-тестов)
+- **.NET SDK 10** (LTS) — проверено на `net10.0`;
+- **Node.js** 20.19+, 22.12+ или 24.x и **npm** 10+;
+- **Chrome** или **Edge** для headless-тестов клиента.
 
-## Установка и запуск
+## Быстрый старт
 
-```bash
-npm install     # установить зависимости
-npm start       # запустить дев-сервер (http://localhost:4200)
-npm run build   # production-сборка в dist/
-npm test        # unit-тесты (headless Chrome, без watch)
+Терминал 1 — backend:
+
+```powershell
+cd backend\CalorieTracker.Api
+dotnet user-secrets set "Auth:JwtKey" "<секрет не короче 32 символов>"
+dotnet run
+# http://localhost:5254, Swagger UI: http://localhost:5254/swagger
 ```
 
-`npm test` ожидает установленный Chrome. Если Chrome не найден, укажите путь к
-браузеру в переменной окружения `CHROME_BIN`, например для Edge:
+Терминал 2 — frontend (из корня репозитория):
+
+```powershell
+npm install
+npm start
+# http://localhost:4200 — запросы /api проксируются на http://localhost:5254
+```
+
+Демо-учётка (создаётся сидом): **alex@example.com / Demo1234!**
+(имя — «Алексей»). Можно зарегистрировать нового пользователя — его дневник,
+настройки и профиль хранятся отдельно.
+
+## Backend
+
+### Структура решения
+
+```
+backend/
+  CalorieTracker.sln
+  CalorieTracker.Api/
+    Domain/            # ядро: сущности, объекты-значения, сервисы, интерфейсы репозиториев
+      Common/          # PagedResult<T>, пагинация, парсер дат, ошибки валидации
+      Entities/        # User, UserSettings, Product, DiaryEntry, Meal, MealItem
+      ValueObjects/    # Email, PersonName, ProductName, NutritionFacts, GramAmount
+      Services/        # AuthService, DiaryService, DashboardService, SettingsService, ProfileService, ProductService
+      Repositories/    # интерфейсы репозиториев
+      Nutrition/       # расчёт пищевой ценности
+      Models/          # команды и модели дашборда
+      Security/        # контракты хеширования и токенов
+    Infrastructure/    # заглушка-хранилище, сид, безопасность, настройки, DI
+      InMemory/        # InMemoryDatabase + репозитории на словарях
+      InMemory/Seed/   # DatabaseSeeder, каталог продуктов
+      Security/        # JwtTokenService (HS256), Pbkdf2PasswordHasher
+      Options/         # Auth/Cors/Persistence/Seed
+      DependencyInjection.cs
+    Presentation/      # REST-контроллеры, DTO, middleware, DI
+      Controllers/     # Auth, Diary, Dashboard, Settings, Me, Products, Health
+      Contracts/       # DTO запросов/ответов
+      Middleware/      # RequestLogging, ExceptionHandling
+      Mapping/         # DtoMapper
+      DependencyInjection.cs
+  CalorieTracker.Tests/  # xUnit: доменные тесты + интеграционные (WebApplicationFactory)
+```
+
+**Направление зависимостей:** `Presentation → Domain ← Infrastructure`.
+`Domain` не зависит от инфраструктуры и фреймворков: репозитории объявлены
+интерфейсами, сервисы домена регистрируются в `Infrastructure.DependencyInjection`.
+
+### Конфигурация
+
+Источники: `appsettings.json` + `appsettings.Development.json` (Options pattern
+с валидацией на старте).
+
+| Секция              | Ключ                            | Назначение                                             |
+|---------------------|---------------------------------|--------------------------------------------------------|
+| `Auth`              | `JwtKey`                        | Секрет подписи JWT (HS256), **минимум 32 символа**     |
+| `Auth`              | `Issuer`                        | Издатель токена (`iss`)                                |
+| `Auth`              | `AccessTtlMinutes`              | Время жизни access-токена (минуты)                     |
+| `Auth`              | `CookieName`                    | Имя httpOnly-cookie (`access_token`)                   |
+| `Cors`              | `AllowedOrigins`                | Список разрешённых источников браузерного UI           |
+| `Persistence`       | `Provider`                      | `InMemory` (единственное поддерживаемое значение)      |
+| `Seed`              | `Enabled`                       | Заполнять ли заглушку демо-данными при старте          |
+
+`JwtKey` в репозитории пустой (плейсхолдер). Реальный ключ задаётся через
+user-secrets или переменную окружения **`Auth__JwtKey`**. Если ключ не задан
+или короче 32 символов, приложение **падает на старте** с понятным сообщением.
+Файлы с секретами исключены через `backend/.gitignore`.
+
+### Запуск
+
+```powershell
+cd backend
+dotnet restore
+dotnet run --project CalorieTracker.Api
+```
+
+Профиль `http` (по умолчанию через `dotnet run`) слушает
+`http://localhost:5254`; профиль `https` дополнительно слушает
+`https://localhost:7036`. Именно на `http://localhost:5254` настроен прокси
+клиента.
+
+### Swagger
+
+В окружении `Development` доступен Swagger UI:
+`http://localhost:5254/swagger` (спецификация —
+`/swagger/v1/swagger.json`). У методов оформлены описания и коды ответов
+(`[ProducesResponseType]`).
+
+### Тесты
+
+```powershell
+cd backend
+dotnet test CalorieTracker.sln
+```
+
+xUnit: доменные unit-тесты (объекты-значения, расчёты, валидация) и
+интеграционные тесты через `WebApplicationFactory` (успешные сценарии,
+400/401/404/409, границы пагинации, `totalCount`, доступ к чужим данным → 404,
+формат ошибок, отсутствие `passwordHash` в ответах).
+
+### REST API (`/api/v1`)
+
+| Метод, путь                              | Успех | Назначение                                             |
+|------------------------------------------|:-----:|--------------------------------------------------------|
+| `POST /auth/register`                    | 201   | Регистрация, ставит httpOnly-cookie с JWT              |
+| `POST /auth/login`                       | 200   | Вход, ставит httpOnly-cookie с JWT                     |
+| `POST /auth/logout`                      | 204   | Выход, удаляет cookie                                  |
+| `GET  /auth/me`                          | 200   | Текущий пользователь (401 — если сессии нет)           |
+| `GET  /diary?date=YYYY-MM-DD`            | 200   | Дневник за дату (всегда четыре приёма пищи)            |
+| `POST /diary/items`                      | 201   | Добавить продукт в приём пищи                          |
+| `PUT  /diary/items/{itemId}`             | 200   | Изменить количество позиции (в граммах)                |
+| `DELETE /diary/items/{itemId}`           | 200   | Удалить позицию                                        |
+| `GET  /diary/history?page&pageSize`      | 200   | История дневника постранично (даты по убыванию)        |
+| `GET  /dashboard?date=YYYY-MM-DD`        | 200   | Агрегат дня: итоги, приёмы, недавние продукты, нормы   |
+| `GET  /settings`                         | 200   | Настройки пользователя                                 |
+| `PUT  /settings`                         | 200   | Частичное обновление настроек                          |
+| `GET  /me`                               | 200   | Профиль текущего пользователя                          |
+| `PUT  /me`                               | 200   | Изменить имя/e-mail                                    |
+| `PUT  /me/password`                      | 204   | Смена пароля                                           |
+| `DELETE /me`                             | 204   | Удалить аккаунт вместе с данными                       |
+| `GET  /products?page&pageSize`           | 200   | Каталог продуктов постранично (по названию)            |
+| `GET  /health`                           | 200   | Проверка живости (без авторизации)                     |
+
+Все методы, кроме `health`, `auth/register`, `auth/login`, требуют
+аутентификации. Идентификаторы — строки uuid, даты — `YYYY-MM-DD`, перечисления
+— строки в нижнем регистре; JSON в camelCase.
+
+### Формат ошибок
+
+Единый для всех отказов:
+
+```json
+{ "message": "…", "errors": { "field": ["текст"] } }
+```
+
+Поле `errors` присутствует только у 400 «Данные заполнены неверно». Тексты
+сообщений совпадают со словарём клиента
+(`src/app/shared/validation/error-texts.ts`).
+
+| Код | Сообщение                                                                 |
+|----:|---------------------------------------------------------------------------|
+| 400 | `Данные заполнены неверно` (+ `errors`), `Некорректная дата`, `Некорректный идентификатор`, `Неверный текущий пароль` |
+| 401 | `Не авторизован` (вход — `Неверный email или пароль`)                     |
+| 404 | `Запись не найдена` (в т. ч. для чужих ресурсов — защита от IDOR)         |
+| 409 | `Пользователь с таким email уже существует`                               |
+
+### Аутентификация
+
+- JWT (HS256) хранится в **httpOnly** cookie `access_token`, `SameSite=Strict`
+  (вне Development — ещё и `Secure`); из JavaScript токен недоступен.
+- Пароли — PBKDF2-SHA256, 210 000 итераций, случайная соль, сравнение с
+  постоянным временем.
+- `userId` берётся **только** из claims токена; все данные фильтруются по
+  пользователю (идемпотентная защита от IDOR).
+
+### Middleware
+
+1. `RequestLoggingMiddleware` — метод, путь, статус, время выполнения (без
+   паролей и персональных данных);
+2. `ExceptionHandlingMiddleware` — перехватывает исключения, отдаёт единый
+   формат ошибки, не раскрывает стектрейс.
+
+### Хранилище-заглушка и как заменить на реальную БД
+
+Данные живут в `Infrastructure/InMemory` (потокобезопасные словари
+`InMemoryDatabase`), доступ — через интерфейсы `Domain/Repositories`.
+EF Core, миграции и реальная СУБД **не используются** (по условию задания).
+
+Замена на настоящую БД:
+
+1. реализуйте интерфейсы из `Domain/Repositories` над EF Core/Dapper (например,
+   `EfUserRepository`, `EfDiaryRepository`, …);
+2. зарегистрируйте их в `Infrastructure/DependencyInjection.cs` вместо
+   `InMemory*` при соответствующем значении `Persistence:Provider`;
+3. при необходимости замените `DatabaseSeeder` (он вызывается из `Program.cs`
+   и работает через те же интерфейсы репозиториев, поэтому остаётся валидным).
+
+## Frontend
+
+### Стек и запуск
+
+Angular 20 (standalone, signals, новый control flow), TypeScript 5.8 (strict),
+RxJS, reactive forms, Karma + Jasmine. UI-библиотеки не подключены.
+
+```powershell
+npm install
+npm start     # ng serve + proxy.conf.json: /api → http://localhost:5254
+npm run build # production-сборка в dist/
+npm test      # unit-тесты (headless)
+```
+
+`npm test` использует `ChromeHeadless`. Если Chrome не установлен, укажите
+браузер в `CHROME_BIN`, например Edge:
 
 ```powershell
 $env:CHROME_BIN = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 npm test
 ```
 
-## Демо-учётка
+### Связь с backend
 
-Мок-слой при первом запуске сам создаёт демо-пользователя:
+- `provideHttpClient` с функциональными интерцепторами
+  (`src/app/core/http/api-prefix.interceptor.ts`,
+  `src/app/core/http/api-error.interceptor.ts`);
+- базовый префикс `/api/v1` задан в одном InjectionToken —
+  `src/app/core/config/api-base-url.ts`;
+- интерцептор добавляет `withCredentials` (cookie с JWT) и приводит любой сбой
+  к доменной форме `ApiError { status, body: { message, errors? } }`;
+- 401 на защищённых запросах сбрасывает кэш пользователя и ведёт на `/login`
+  (для `/auth/*` редиректа нет — этим управляет `AuthService.loadMe()`);
+- в дев-режиме запросы проксируются на Kestrel через `proxy.conf.json`.
 
-| Поле   | Значение            |
-|--------|---------------------|
-| Имя    | `Алексей`           |
-| Email  | `alex@example.com`  |
-| Пароль | `Demo1234!`         |
+Сессия не хранится в `localStorage`: guards вызывают `AuthService.loadMe()`
+(`GET /auth/me`), а `401` трактуется как «гость».
 
-Можно также зарегистрировать нового пользователя — данные каждого пользователя
-(дневник и настройки) хранятся отдельно по его `userId`.
-
-## Сброс данных
-
-Все данные приложения лежат в `localStorage` под ключами с префиксом
-`calorie-tracker.`:
-
-- `calorie-tracker.mock.db.v1` — «база данных» мока (пользователи, дневник, настройки);
-- `calorie-tracker.session.userId` — текущая сессия;
-- `calorie-tracker.theme` — выбранная тема оформления (светлая/тёмная).
-
-Чтобы сбросить приложение к исходному состоянию, очистите эти ключи в консоли
-браузера (DevTools → Application → Local Storage) или выполните:
-
-```js
-Object.keys(localStorage)
-  .filter((key) => key.startsWith('calorie-tracker.'))
-  .forEach((key) => localStorage.removeItem(key));
-location.reload();
-```
-
-После перезагрузки мок-слой заново создаст БД и наполнит её детерминированным
-сидом (сегодня и два предыдущих дня).
-
-## Структура каталогов
-
-Внутри `src/app` только пять веток: `core`, `mock`, `shared`, `layout`, `features`.
+### Структура каталогов
 
 ```
 src/app/
   core/
-    config/        app.config.ts, app.routes.ts
-    navigation/    guards.ts (+ spec)
-    services/      auth, dashboard, diary, settings, profile, theme (+ spec у каждого)
-  mock/
-    index.ts                 setupMockLayer()
-    mock-api-client.ts, mock-db.ts, mock-error.ts, ids.ts, seed.ts
-    auth/ (handlers.ts, session-store.ts)  diary/  dashboard/  settings/  profile/
+    config/        app.config.ts, app.routes.ts, api-base-url.ts
+    http/          api-prefix.interceptor.ts, api-error.interceptor.ts
+    navigation/    guards.ts
+    services/      auth, diary, dashboard, settings, profile, product, theme
   shared/
     models.ts, api-error.ts, dates.ts, calculations.ts, units.ts
     validation/    validators.ts, error-texts.ts
@@ -98,22 +262,22 @@ src/app/
     app-shell/     сайдбар + <router-outlet />
     sidebar/
   features/
-    auth/          auth.routes.ts, pages/login/, pages/register/
-    dashboard/     dashboard.routes.ts, pages/dashboard/, components/add-food-modal/
-    diary/         diary.routes.ts, pages/diary/
-    settings/      settings.routes.ts, pages/settings/
+    auth/          pages/login/, pages/register/
+    dashboard/     pages/dashboard/, components/add-food-modal/
+    diary/         pages/diary/
+    settings/      pages/settings/
 ```
 
-Архитектурные правила:
+Правила: страницы работают только с сервисами `core/services`; у каждого
+компонента четыре файла (`.ts` + `.html` + `.css` + `.spec.ts`); состояние —
+сигналы; все компоненты `ChangeDetectionStrategy.OnPush`.
 
-- страницы и компоненты **никогда** не импортируют `mock/` — только сервисы из
-  `core/services`; единственное исключение — `core/config/app.config.ts`, где
-  вызывается `setupMockLayer()`;
-- у каждого компонента четыре файла: `.ts` + `.html` + `.css` + `.spec.ts`
-  (`templateUrl` / `styleUrl`, без inline-шаблонов и стилей);
-- все сервисы возвращают `Promise` и общаются с мок-слоем через
-  `MockApiClient.call<T>('домен.метод', params)`;
-- состояние — сигналы, все компоненты `ChangeDetectionStrategy.OnPush`.
+## Тесты (итог)
+
+```powershell
+cd backend;                 dotnet test CalorieTracker.sln   # 59 тестов
+cd ..;                      npm test                          # 169 тестов
+```
 
 ## Документация
 

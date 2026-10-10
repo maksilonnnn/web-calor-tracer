@@ -11,7 +11,7 @@
  *  - «Опасная зона»: удаление аккаунта → ProfileService.deleteAccount,
  *    затем AuthService.logout() и переход на /register.
  *
- * Отказы мока показываются дословно через NotificationService; тексты
+ * Отказы бэкенда показываются дословно через NotificationService; тексты
  * ошибок полей — только из словаря ERROR_TEXTS после touched.
  */
 import {
@@ -23,6 +23,7 @@ import {
 } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from '../../../../core/services/auth.service';
 import { ProfileService } from '../../../../core/services/profile.service';
@@ -108,8 +109,8 @@ export class SettingsComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     try {
       const [profile, settings] = await Promise.all([
-        this.profileService.get(),
-        this.settingsService.get(),
+        firstValueFrom(this.profileService.get()),
+        firstValueFrom(this.settingsService.get()),
       ]);
       this.profileForm.setValue({ name: profile.name, email: profile.email });
       this.unit.set(settings.weightUnit);
@@ -132,9 +133,9 @@ export class SettingsComponent implements OnInit {
     const input = this.profileForm.getRawValue();
     await this.saveProfileState.run(async () => {
       try {
-        const updated = await this.profileService.update(input);
+        const updated = await firstValueFrom(this.profileService.update(input));
         this.profileForm.setValue({ name: updated.name, email: updated.email });
-        await this.auth.loadMe();
+        await firstValueFrom(this.auth.loadMe());
         this.notifications.notifySuccess('Сохранено');
       } catch (error) {
         this.notifications.notifyError(toApiError(error).body.message);
@@ -149,7 +150,7 @@ export class SettingsComponent implements OnInit {
     }
     await this.settingsState.run(async () => {
       try {
-        const settings = await this.settingsService.update({ weightUnit: unit });
+        const settings = await firstValueFrom(this.settingsService.update({ weightUnit: unit }));
         this.applySettings(settings.weightUnit, settings.notificationsEnabled);
       } catch (error) {
         this.notifications.notifyError(toApiError(error).body.message);
@@ -161,7 +162,9 @@ export class SettingsComponent implements OnInit {
   protected async setNotificationsEnabled(enabled: boolean): Promise<void> {
     await this.settingsState.run(async () => {
       try {
-        const settings = await this.settingsService.update({ notificationsEnabled: enabled });
+        const settings = await firstValueFrom(
+          this.settingsService.update({ notificationsEnabled: enabled }),
+        );
         this.applySettings(settings.weightUnit, settings.notificationsEnabled);
       } catch (error) {
         this.notifications.notifyError(toApiError(error).body.message);
@@ -189,7 +192,7 @@ export class SettingsComponent implements OnInit {
     const input = this.passwordForm.getRawValue();
     await this.changePasswordState.run(async () => {
       try {
-        await this.profileService.changePassword(input);
+        await firstValueFrom(this.profileService.changePassword(input));
         this.passwordForm.reset();
         this.passwordModalOpen.set(false);
         this.notifications.notifySuccess('Пароль изменён');
@@ -211,8 +214,8 @@ export class SettingsComponent implements OnInit {
   protected async deleteAccount(): Promise<void> {
     await this.deleteState.run(async () => {
       try {
-        await this.profileService.deleteAccount();
-        await this.auth.logout();
+        await firstValueFrom(this.profileService.deleteAccount());
+        await firstValueFrom(this.auth.logout());
         this.deleteModalOpen.set(false);
         await this.router.navigate(['/register']);
       } catch (error) {

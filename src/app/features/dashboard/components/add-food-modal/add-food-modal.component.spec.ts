@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 
 import { DEFAULT_SETTINGS, MealType, WeightUnit } from '../../../../shared/models';
 import { calculateNutrition } from '../../../../shared/calculations';
@@ -40,8 +41,8 @@ describe('AddFoodModalComponent', () => {
   };
 
   beforeEach(() => {
-    diary = { addFood: jasmine.createSpy('addFood').and.resolveTo(undefined) };
-    settings = { get: jasmine.createSpy('get').and.resolveTo({ ...DEFAULT_SETTINGS }) };
+    diary = { addFood: jasmine.createSpy('addFood').and.returnValue(of(undefined)) };
+    settings = { get: jasmine.createSpy('get').and.returnValue(of({ ...DEFAULT_SETTINGS })) };
 
     fixture = TestBed.configureTestingModule({
       imports: [AddFoodModalComponent],
@@ -101,7 +102,7 @@ describe('AddFoodModalComponent', () => {
   });
 
   it('единица кг: количество конвертируется в граммы перед отправкой', async () => {
-    settings.get.and.resolveTo({ ...DEFAULT_SETTINGS, weightUnit: 'kg' });
+    settings.get.and.returnValue(of({ ...DEFAULT_SETTINGS, weightUnit: 'kg' }));
     await init();
     expect(component.unit()).toBe('kg');
 
@@ -111,11 +112,11 @@ describe('AddFoodModalComponent', () => {
     expect(diary.addFood).toHaveBeenCalledWith(jasmine.objectContaining({ quantity: 150 }));
   });
 
-  it('отказ мока показывается уведомлением, события не испускаются', async () => {
+  it('отказ бэкенда показывается уведомлением, события не испускаются', async () => {
     await init();
     const added = jasmine.createSpy('added');
     fixture.componentInstance.added.subscribe(added);
-    diary.addFood.and.returnValue(Promise.reject({ status: 401, body: { message: 'Не авторизован' } }));
+    diary.addFood.and.returnValue(throwError(() => ({ status: 401, body: { message: 'Не авторизован' } })));
 
     component.form.patchValue(VALID);
     await component.handleAdd();
@@ -125,7 +126,7 @@ describe('AddFoodModalComponent', () => {
   });
 
   it('недоступные настройки оставляют граммы по умолчанию', async () => {
-    settings.get.and.returnValue(Promise.reject(new Error('нет сети')));
+    settings.get.and.returnValue(throwError(() => new Error('нет сети')));
     await init();
 
     expect(component.unit()).toBe('g');

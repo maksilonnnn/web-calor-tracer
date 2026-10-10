@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeToggleComponent } from '../../shared/components/theme-toggle/theme-toggle.component';
 
@@ -21,7 +22,7 @@ export class SidebarComponent {
   });
 
   protected async logout(): Promise<void> {
-    await this.auth.logout();
+    await firstValueFrom(this.auth.logout());
     await this.router.navigateByUrl('/login');
   }
 }

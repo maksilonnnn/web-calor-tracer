@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 
 import {
   DEFAULT_SETTINGS,
@@ -62,11 +63,11 @@ describe('DiaryComponent', () => {
 
   beforeEach(() => {
     diary = {
-      getDay: jasmine.createSpy('getDay').and.resolveTo(ENTRY),
-      updateQuantity: jasmine.createSpy('updateQuantity').and.resolveTo(ENTRY),
-      removeItem: jasmine.createSpy('removeItem').and.resolveTo(ENTRY),
+      getDay: jasmine.createSpy('getDay').and.returnValue(of(ENTRY)),
+      updateQuantity: jasmine.createSpy('updateQuantity').and.returnValue(of(ENTRY)),
+      removeItem: jasmine.createSpy('removeItem').and.returnValue(of(ENTRY)),
     };
-    settings = { get: jasmine.createSpy('get').and.resolveTo({ ...DEFAULT_SETTINGS }) };
+    settings = { get: jasmine.createSpy('get').and.returnValue(of({ ...DEFAULT_SETTINGS })) };
 
     fixture = TestBed.configureTestingModule({
       imports: [DiaryComponent],
@@ -111,7 +112,7 @@ describe('DiaryComponent', () => {
   });
 
   it('отказ загрузки показывается уведомлением', async () => {
-    diary.getDay.and.returnValue(Promise.reject({ status: 401, body: { message: 'Не авторизован' } }));
+    diary.getDay.and.returnValue(throwError(() => ({ status: 401, body: { message: 'Не авторизован' } })));
     await init();
 
     expect(notifyError).toHaveBeenCalledWith('Не авторизован');
@@ -119,7 +120,7 @@ describe('DiaryComponent', () => {
   });
 
   it('редактирование в кг: количество показывается и отправляется в граммах', async () => {
-    settings.get.and.resolveTo({ ...DEFAULT_SETTINGS, weightUnit: 'kg' });
+    settings.get.and.returnValue(of({ ...DEFAULT_SETTINGS, weightUnit: 'kg' }));
     await init();
 
     component.openEditModal(ITEM);

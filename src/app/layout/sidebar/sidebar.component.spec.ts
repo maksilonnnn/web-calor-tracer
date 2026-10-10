@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WritableSignal, signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 
 import { UserDto } from '../../shared/models';
 import { AuthService } from '../../core/services/auth.service';
@@ -16,7 +17,7 @@ describe('SidebarComponent', () => {
     user = signal<UserDto | null>(null);
     auth = {
       currentUser: user.asReadonly(),
-      logout: jasmine.createSpy('logout').and.resolveTo(undefined),
+      logout: jasmine.createSpy('logout').and.returnValue(of(undefined)),
     };
 
     fixture = TestBed.configureTestingModule({

@@ -20,7 +20,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
-import { map } from 'rxjs';
+import { firstValueFrom, map } from 'rxjs';
 
 import { DiaryService } from '../../../../core/services/diary.service';
 import { SettingsService } from '../../../../core/services/settings.service';
@@ -164,7 +164,7 @@ export class AddFoodModalComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const settings = await this.settingsService.get();
+      const settings = await firstValueFrom(this.settingsService.get());
       this.unit.set(settings.weightUnit);
     } catch {
       // Не удалось получить настройки — остаёмся на граммах по умолчанию.
@@ -220,19 +220,21 @@ export class AddFoodModalComponent implements OnInit {
     const quantity = toGrams(toNumber(value.quantity), this.unit());
     await this.submitState.run(async () => {
       try {
-        await this.diary.addFood({
-          date: this.today,
-          mealType: value.mealType,
-          product: {
-            name: value.name,
-            calories: toNumber(value.calories),
-            protein: toNumber(value.protein),
-            fat: toNumber(value.fat),
-            carbs: toNumber(value.carbs),
-            category: value.category,
-          },
-          quantity,
-        });
+        await firstValueFrom(
+          this.diary.addFood({
+            date: this.today,
+            mealType: value.mealType,
+            product: {
+              name: value.name,
+              calories: toNumber(value.calories),
+              protein: toNumber(value.protein),
+              fat: toNumber(value.fat),
+              carbs: toNumber(value.carbs),
+              category: value.category,
+            },
+            quantity,
+          }),
+        );
         this.notifications.notifySuccess('Сохранено');
         this.form.reset();
         this.added.emit();
