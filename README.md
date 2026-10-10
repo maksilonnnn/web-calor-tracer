@@ -137,7 +137,7 @@ xUnit: доменные unit-тесты (объекты-значения, рас
 | `GET  /auth/me`                          | 200   | Текущий пользователь (401 — если сессии нет)           |
 | `GET  /diary?date=YYYY-MM-DD`            | 200   | Дневник за дату (всегда четыре приёма пищи)            |
 | `POST /diary/items`                      | 201   | Добавить продукт в приём пищи                          |
-| `PUT  /diary/items/{itemId}`             | 200   | Изменить количество позиции (в граммах)                |
+| `PUT  /diary/items/{itemId}`             | 200   | Изменить позицию: количество и/или данные продукта (на 100 г) |
 | `DELETE /diary/items/{itemId}`           | 200   | Удалить позицию                                        |
 | `GET  /diary/history?page&pageSize`      | 200   | История дневника постранично (даты по убыванию)        |
 | `GET  /dashboard?date=YYYY-MM-DD`        | 200   | Агрегат дня: итоги, приёмы, недавние продукты, нормы   |
@@ -275,11 +275,11 @@ src/app/
 ## Тесты (итог)
 
 ```powershell
-cd backend;                 dotnet test CalorieTracker.sln   # 59 тестов
-cd ..;                      npm test                          # 169 тестов
+cd backend;                 dotnet test CalorieTracker.sln   # 74 теста
+cd ..;                      npm test                          # 190 тестов
 ```
 
 ## Документация
 
-- [Пользовательские истории](docs/user-stories.md)
-- [Скриншоты экранов](docs/screens/)
+- [Пользовательские истории](5 историй.txt) (копия — [docs/user-stories.md](docs/user-stories.md))
+- Скриншоты экранов: `Главная страница.png`, `Дневник.png`, `Настройки.png`, `Страница регистрации.png` — в корне репозитория (копии — [docs/screens/](docs/screens/))

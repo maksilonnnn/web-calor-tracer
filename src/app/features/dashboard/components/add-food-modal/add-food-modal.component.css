@@ -79,12 +79,16 @@
       cursor: pointer;
       transition: background-color 0.15s ease, color 0.15s ease;
     }
-    .stepper-btn:hover {
+    .stepper-btn:hover:not(:disabled) {
       background: var(--bg-hover);
       color: var(--text-primary);
     }
-    .stepper-btn:active {
+    .stepper-btn:active:not(:disabled) {
       background: var(--bg-surface-secondary);
+    }
+    .stepper-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
     .stepper-input {
       flex: 1;
@@ -106,6 +110,13 @@
       margin: 0;
     }
     .stepper-unit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      /* Резерв ширины: спиннер загрузки единицы и подпись «кг» занимают
+         одинаковое место, чтобы строка степпера не сдвигалась после ответа. */
+      min-width: 40px;
+      box-sizing: border-box;
       font-size: 13px;
       color: var(--text-secondary);
       padding-right: 4px;

@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormGroup } from '@angular/forms';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
-import { DEFAULT_SETTINGS, MealType, WeightUnit } from '../../../../shared/models';
+import { DEFAULT_SETTINGS, MealType, Settings, WeightUnit } from '../../../../shared/models';
 import { calculateNutrition } from '../../../../shared/calculations';
 import { todayIso } from '../../../../shared/dates';
 import { DiaryService } from '../../../../core/services/diary.service';
@@ -151,5 +151,104 @@ describe('AddFoodModalComponent', () => {
     fixture.detectChanges();
 
     expect(component.previewNutrition()).toEqual({ calories: 52, protein: 0.3, fat: 0.2, carbs: 14 });
+  });
+
+  it('настройки в полёте: спиннер единицы, количество и отправка заблокированы, отправка не уходит', async () => {
+    const subject = new Subject<Settings>();
+    settings.get.and.returnValue(subject);
+    fixture.detectChanges();
+
+    // Спиннер вместо подписи единицы
+    const loading = fixture.nativeElement.querySelector('[data-test="food-unit-loading"]');
+    expect(loading).not.toBeNull();
+    expect(loading.textContent.trim()).toBe('Загрузка единиц измерения');
+
+    // Количество только для чтения, кнопки степпера и отправки недоступны
+    const quantity = fixture.nativeElement.querySelector('[data-test="food-quantity-input"]') as HTMLInputElement;
+    expect(quantity.readOnly).toBe(true);
+    const stepperButtons = Array.from(
+      fixture.nativeElement.querySelectorAll('.stepper-btn'),
+    ) as HTMLButtonElement[];
+    expect(stepperButtons.length).toBe(2);
+    expect(stepperButtons.every((button) => button.disabled)).toBe(true);
+    const submit = fixture.nativeElement.querySelector('[data-test="food-submit"] button') as HTMLButtonElement;
+    expect(submit.disabled).toBe(true);
+
+    // Превью в нейтральном состоянии, без ошибочной единицы
+    expect(fixture.nativeElement.querySelector('.preview-quantity').textContent.trim()).toBe('—');
+
+    // Отправка (в т.ч. Enter) до ответа настроек не проходит
+    component.form.patchValue(VALID);
+    await component.handleAdd();
+    expect(diary.addFood).not.toHaveBeenCalled();
+
+    subject.complete();
+  });
+
+  it('после ответа «кг»: подпись кг, элементы доступны, конвертация в граммы', async () => {
+    const subject = new Subject<Settings>();
+    settings.get.and.returnValue(subject);
+    fixture.detectChanges();
+    subject.next({ ...DEFAULT_SETTINGS, weightUnit: 'kg' });
+    subject.complete();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.unit()).toBe('kg');
+    expect(component.unitLabel()).toBe('кг');
+    expect(fixture.nativeElement.querySelector('[data-test="food-unit-loading"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.stepper-unit').textContent.trim()).toBe('кг');
+
+    const quantity = fixture.nativeElement.querySelector('[data-test="food-quantity-input"]') as HTMLInputElement;
+    expect(quantity.readOnly).toBe(false);
+    const stepperButtons = Array.from(
+      fixture.nativeElement.querySelectorAll('.stepper-btn'),
+    ) as HTMLButtonElement[];
+    expect(stepperButtons.every((button) => !button.disabled)).toBe(true);
+    const submit = fixture.nativeElement.querySelector('[data-test="food-submit"] button') as HTMLButtonElement;
+    expect(submit.disabled).toBe(false);
+
+    component.form.patchValue({ ...VALID, quantity: 0.15 });
+    await component.handleAdd();
+    expect(diary.addFood).toHaveBeenCalledWith(jasmine.objectContaining({ quantity: 150 }));
+  });
+
+  it('после ошибки настроек: граммы по умолчанию, подпись г, всё доступно (регрессия)', async () => {
+    const subject = new Subject<Settings>();
+    settings.get.and.returnValue(subject);
+    fixture.detectChanges();
+    subject.error(new Error('нет сети'));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(component.unit()).toBe('g');
+    expect(component.unitLabel()).toBe('г');
+    expect(fixture.nativeElement.querySelector('[data-test="food-unit-loading"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.stepper-unit').textContent.trim()).toBe('г');
+
+    const quantity = fixture.nativeElement.querySelector('[data-test="food-quantity-input"]') as HTMLInputElement;
+    expect(quantity.readOnly).toBe(false);
+    const stepperButtons = Array.from(
+      fixture.nativeElement.querySelectorAll('.stepper-btn'),
+    ) as HTMLButtonElement[];
+    expect(stepperButtons.every((button) => !button.disabled)).toBe(true);
+    const submit = fixture.nativeElement.querySelector('[data-test="food-submit"] button') as HTMLButtonElement;
+    expect(submit.disabled).toBe(false);
+  });
+
+  it('гонка: изменение количества и отправка до ответа настроек не меняют значение и не отправляют', async () => {
+    const subject = new Subject<Settings>();
+    settings.get.and.returnValue(subject);
+    fixture.detectChanges();
+
+    component.form.patchValue({ ...VALID, quantity: 100 });
+    component.increment();
+    component.decrement();
+    await component.handleAdd();
+
+    expect(component.form.controls['quantity'].value).toBe(100);
+    expect(diary.addFood).not.toHaveBeenCalled();
+
+    subject.complete();
   });
 });
