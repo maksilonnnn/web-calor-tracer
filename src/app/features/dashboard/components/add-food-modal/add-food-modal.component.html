@@ -1,0 +1,144 @@
+    <app-modal
+      [isOpen]="isOpen()"
+      title="Добавить еду"
+      subtitle="Добавьте продукт и укажите его пищевую ценность."
+      width="580px"
+      (close)="close.emit()"
+    >
+      <form class="add-food-form" [formGroup]="form" (ngSubmit)="handleAdd()">
+        <!-- Приём пищи -->
+        <div class="form-group">
+          <span class="group-label">Приём пищи</span>
+          <div class="meal-selector">
+            @for (meal of meals; track meal.value) {
+              <button
+                type="button"
+                class="meal-option"
+                [class.active]="form.controls.mealType.value === meal.value"
+                (click)="selectMeal(meal.value)"
+                [attr.data-test]="'meal-' + meal.value"
+              >
+                <span class="meal-emoji">{{ meal.icon }}</span>
+                <span>{{ meal.label }}</span>
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Название продукта -->
+        <div class="form-group">
+          <app-input
+            label="Название продукта"
+            placeholder="Например, Куриная грудка"
+            formControlName="name"
+            [error]="nameError()"
+            data-test="food-name-input"
+          />
+        </div>
+
+        <!-- Количество -->
+        <div class="form-group">
+          <span class="group-label">Количество</span>
+          <div class="stepper">
+            <button type="button" class="stepper-btn" aria-label="Уменьшить" (click)="decrement()">−</button>
+            <input
+              class="stepper-input"
+              type="number"
+              min="0"
+              formControlName="quantity"
+              aria-label="Количество"
+              data-test="food-quantity-input"
+            />
+            <span class="stepper-unit">{{ unitLabel() }}</span>
+            <button type="button" class="stepper-btn" aria-label="Увеличить" (click)="increment()">+</button>
+          </div>
+          @if (quantityError()) {
+            <span class="input-error" data-test="food-quantity-error">{{ quantityError() }}</span>
+          }
+        </div>
+
+        <!-- Пищевая ценность -->
+        <div class="form-group">
+          <span class="group-label">Пищевая ценность</span>
+          <div class="nutrition-grid">
+            <app-input
+              label="Калории"
+              type="number"
+              unit="ккал"
+              formControlName="calories"
+              [error]="caloriesError()"
+              data-test="food-calories-input"
+            />
+            <app-input
+              label="Белки"
+              type="number"
+              unit="г"
+              formControlName="protein"
+              [error]="proteinError()"
+              data-test="food-protein-input"
+            />
+            <app-input
+              label="Жиры"
+              type="number"
+              unit="г"
+              formControlName="fat"
+              [error]="fatError()"
+              data-test="food-fat-input"
+            />
+            <app-input
+              label="Углеводы"
+              type="number"
+              unit="г"
+              formControlName="carbs"
+              [error]="carbsError()"
+              data-test="food-carbs-input"
+            />
+          </div>
+        </div>
+
+        <!-- Категория -->
+        <div class="form-group">
+          <span class="group-label">Категория</span>
+          <div class="select-wrap">
+            <select class="select" formControlName="category" aria-label="Категория продукта" data-test="food-category-select">
+              @for (item of categories; track item) {
+                <option [value]="item">{{ item }}</option>
+              }
+            </select>
+            <span class="select-arrow">▾</span>
+          </div>
+        </div>
+
+        <!-- Превью итога -->
+        <div class="preview">
+          <p class="preview-heading">Итог</p>
+          <div class="preview-top">
+            <div class="preview-info">
+              <p class="preview-name">{{ formValue().name || 'Название продукта' }}</p>
+              <p class="preview-quantity">{{ formValue().quantity || 0 }} {{ unitLabel() }}</p>
+            </div>
+            <p class="preview-calories">
+              {{ previewNutrition().calories }}
+              <span class="preview-unit">ккал</span>
+            </p>
+          </div>
+          <div class="preview-macros">
+            <span class="preview-macro">Белки <strong>{{ previewNutrition().protein }} г</strong></span>
+            <span class="preview-macro">Жиры <strong>{{ previewNutrition().fat }} г</strong></span>
+            <span class="preview-macro">Углеводы <strong>{{ previewNutrition().carbs }} г</strong></span>
+          </div>
+        </div>
+
+        <!-- Действия -->
+        <div class="modal-actions">
+          <app-button variant="secondary" (click)="close.emit()">Отмена</app-button>
+          <app-button type="submit" [disabled]="submitState.busy()" data-test="food-submit">
+            @if (submitState.busy()) {
+              Сохранение…
+            } @else {
+              Добавить продукт
+            }
+          </app-button>
+        </div>
+      </form>
+    </app-modal>

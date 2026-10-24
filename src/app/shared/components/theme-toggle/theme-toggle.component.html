@@ -1,0 +1,20 @@
+    <div class="theme-toggle" role="group" aria-label="Тема оформления">
+      <button
+        type="button"
+        class="theme-option"
+        [class.active]="themeService.theme() === 'light'"
+        (click)="themeService.setTheme('light')"
+      >
+        <span class="theme-icon">☀️</span>
+        <span>Светлая</span>
+      </button>
+      <button
+        type="button"
+        class="theme-option"
+        [class.active]="themeService.theme() === 'dark'"
+        (click)="themeService.setTheme('dark')"
+      >
+        <span class="theme-icon">🌙</span>
+        <span>Тёмная</span>
+      </button>
+    </div>

@@ -1,0 +1,15 @@
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      margin-left: var(--sidebar-width);
+      padding: 32px 40px;
+    }
+    .main-container {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+    }

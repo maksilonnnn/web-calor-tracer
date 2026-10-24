@@ -1,0 +1,43 @@
+# =====================
+# Dependencies
+# =====================
+/node_modules
+
+# =====================
+# Build output
+# =====================
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# =====================
+# Angular cache
+# =====================
+/.angular/
+
+# =====================
+# Editors / IDE
+# =====================
+/.vscode/*
+!/.vscode/extensions.json
+/.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =====================
+# OS files
+# =====================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =====================
+# Logs
+# =====================
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*

@@ -1,0 +1,8 @@
+    <button
+      [type]="type()"
+      [class]="'btn ' + variant() + ' ' + size()"
+      [class.full-width]="fullWidth()"
+      [disabled]="disabled()"
+    >
+      <ng-content></ng-content>
+    </button>

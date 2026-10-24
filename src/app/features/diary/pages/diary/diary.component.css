@@ -1,0 +1,203 @@
+    .diary-page {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Заголовок */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 4px 0 0 0;
+    }
+    .diary-status {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .date-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .date-input:focus {
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-ring);
+    }
+
+    /* Сетка контента */
+    .diary-content {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .meals-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    /* Карточка приёма пищи */
+    .meal-card {
+      padding: 20px 24px;
+    }
+    .meal-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .meal-icon {
+      font-size: 20px;
+      line-height: 1;
+    }
+    .meal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .meal-count {
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .meal-items {
+      display: flex;
+      flex-direction: column;
+    }
+    .meal-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .meal-item:last-child {
+      border-bottom: none;
+      padding-bottom: 2px;
+    }
+    .item-info {
+      min-width: 0;
+    }
+    .item-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .item-details {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 2px 0 0 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .item-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* Итоги */
+    .summary-column {
+      position: sticky;
+      top: 32px;
+    }
+    .summary-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 16px 0;
+    }
+    .summary-total {
+      text-align: center;
+      padding: 12px 0 20px;
+    }
+    .total-value {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--accent-primary);
+      margin: 0;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .total-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 6px 0 0 0;
+    }
+    .summary-macros {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+    .macro-item {
+      background: var(--bg-surface-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+    }
+    .macro-value {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .macro-value.protein { color: var(--accent-green); }
+    .macro-value.fat { color: var(--accent-orange); }
+    .macro-value.carbs { color: var(--accent-purple); }
+    .macro-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin: 2px 0 0 0;
+    }
+
+    /* Модальные окна */
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .modal-product-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .modal-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 4px;
+    }
