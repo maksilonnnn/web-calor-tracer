@@ -11,12 +11,21 @@ obj/
 *.suo
 .idea/
 
-# Local configuration with secrets (never commit real JwtKey).
-# The real JWT key is provided via user-secrets or the Auth__JwtKey
-# environment variable; appsettings.json keeps only a placeholder.
+# Local configuration with secrets (never commit real JwtKey or DB password).
+# The real JWT key and connection string are provided via user-secrets or
+# environment variables (Auth__JwtKey, ConnectionStrings__CalorieTracker);
+# appsettings.json keeps only placeholders.
 appsettings.Local.json
 appsettings.*.Local.json
+appsettings.*.local.json
+appsettings.*.Local.*.json
+appsettings.*.local.*.json
 *.secrets.json
+.env
+.env.*
+
+# Local run logs
+*.log
 
 # Test / coverage artifacts
 [Tt]est[Rr]esult*/

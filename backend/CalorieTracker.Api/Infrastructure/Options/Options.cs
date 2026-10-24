@@ -33,13 +33,16 @@ public sealed class CorsOptions
     public string[] AllowedOrigins { get; set; } = [];
 }
 
-/// <summary>Провайдер хранилища. Сейчас поддерживается только InMemory-заглушка.</summary>
+/// <summary>
+/// Провайдер хранилища: PostgreSQL (боевой режим) или InMemory-заглушка
+/// (тесты и запуск без базы).
+/// </summary>
 public sealed class PersistenceOptions
 {
     public const string SectionName = "Persistence";
 
-    /// <summary>Имя провайдера; единственное поддерживаемое значение — InMemory.</summary>
-    public string Provider { get; set; } = "InMemory";
+    /// <summary>Имя провайдера: <c>Postgres</c> (по умолчанию) или <c>InMemory</c>.</summary>
+    public string Provider { get; set; } = "Postgres";
 }
 
 /// <summary>Настройки начального заполнения (сида).</summary>
