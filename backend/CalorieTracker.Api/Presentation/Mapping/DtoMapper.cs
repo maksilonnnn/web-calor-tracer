@@ -1,6 +1,7 @@
 using CalorieTracker.Api.Domain.Common;
 using CalorieTracker.Api.Domain.Entities;
 using CalorieTracker.Api.Domain.Models;
+using CalorieTracker.Api.Domain.Security;
 using CalorieTracker.Api.Presentation.Contracts;
 
 namespace CalorieTracker.Api.Presentation.Mapping;
@@ -13,6 +14,17 @@ public static class DtoMapper
         Id = user.Id,
         Name = user.Name.Value,
         Email = user.Email.Value,
+        Role = UserRoles.FromRole(user.Role),
+    };
+
+    public static AdminUserDto ToAdminDto(User user) => new()
+    {
+        Id = user.Id,
+        Name = user.Name.Value,
+        Email = user.Email.Value,
+        Role = UserRoles.FromRole(user.Role),
+        IsBlocked = user.IsBlocked,
+        CreatedAt = user.CreatedAt,
     };
 
     public static ProductDto ToDto(Product product) => new()
