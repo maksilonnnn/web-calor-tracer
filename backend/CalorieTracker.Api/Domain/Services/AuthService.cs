@@ -89,6 +89,14 @@ public sealed class AuthService : IAuthService
             throw new UnauthorizedException(Messages.WrongCredentials);
         }
 
+        // Пароль верный, но аккаунт заблокирован администратором: отдельный
+        // 403 с понятным текстом (не раскрывает существование аккаунта при
+        // неверном пароле — там по-прежнему единый 401).
+        if (user.IsBlocked)
+        {
+            throw new AccountBlockedException(Messages.AccountBlocked);
+        }
+
         return new AuthResult { User = user, Token = _tokenService.CreateToken(user) };
     }
 

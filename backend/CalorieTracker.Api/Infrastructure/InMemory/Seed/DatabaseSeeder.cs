@@ -10,9 +10,10 @@ using Microsoft.Extensions.Options;
 namespace CalorieTracker.Api.Infrastructure.InMemory.Seed;
 
 /// <summary>
-/// Начальное заполнение in-memory заглушки: демо-пользователь
-/// (alex@example.com / Demo1234!), каталог продуктов, дневник за сегодня и
-/// два предыдущих дня, настройки по умолчанию — как seed.ts мок-слоя.
+/// Начальное заполнение in-memory заглушки: два демо-пользователя —
+/// обычный (alex@example.com / Demo1234!) и администратор
+/// (admin@example.com / Admin1234!), каталог продуктов, дневник за сегодня
+/// и два предыдущих дня, настройки по умолчанию.
 /// Идемпотентно: повторный запуск при непустом хранилище ничего не делает.
 /// </summary>
 public sealed class DatabaseSeeder
@@ -20,6 +21,10 @@ public sealed class DatabaseSeeder
     private const string DemoName = "Алексей";
     private const string DemoEmail = "alex@example.com";
     private const string DemoPassword = "Demo1234!";
+
+    private const string AdminName = "Администратор";
+    private const string AdminEmail = "admin@example.com";
+    private const string AdminPassword = "Admin1234!";
 
     private readonly InMemoryDatabase _db;
     private readonly IUserRepository _users;
@@ -69,6 +74,15 @@ public sealed class DatabaseSeeder
             _passwordHasher.Hash(DemoPassword));
         await _users.AddAsync(user, cancellationToken);
 
+        // Второй демо-аккаунт — администратор. Роль задаётся только сидом,
+        // через API выдать её нельзя.
+        var admin = User.Create(
+            PersonName.Create(AdminName),
+            Email.Create(AdminEmail),
+            _passwordHasher.Hash(AdminPassword),
+            role: UserRole.Admin);
+        await _users.AddAsync(admin, cancellationToken);
+
         var catalog = ProductCatalog.CreateProducts();
         foreach (var product in catalog)
         {
@@ -76,6 +90,7 @@ public sealed class DatabaseSeeder
         }
 
         await _settings.SaveAsync(UserSettings.CreateDefault(user.Id), cancellationToken);
+        await _settings.SaveAsync(UserSettings.CreateDefault(admin.Id), cancellationToken);
 
         var today = DateParser.Today();
         for (var offset = 0; offset < SeedDiary.Length; offset++)

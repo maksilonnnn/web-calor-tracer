@@ -28,6 +28,15 @@ public interface IUserRepository
     Task RemoveAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Постраничный список пользователей для админ-панели. Поиск по имени и
+    /// email без учёта регистра; сортировка — сначала новые.
+    /// </summary>
+    Task<PagedResult<User>> GetPagedAsync(
+        Pagination pagination,
+        string? search,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Репозиторий каталога продуктов.</summary>

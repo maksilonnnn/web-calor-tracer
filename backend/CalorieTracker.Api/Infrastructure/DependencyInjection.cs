@@ -85,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
 
         return services;
     }

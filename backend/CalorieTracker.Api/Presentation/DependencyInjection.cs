@@ -1,7 +1,9 @@
 using System.Reflection;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CalorieTracker.Api.Domain;
+using CalorieTracker.Api.Domain.Repositories;
 using CalorieTracker.Api.Infrastructure.Options;
 using CalorieTracker.Api.Presentation.Contracts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -147,15 +149,52 @@ public static class DependencyInjection
                 logger.LogWarning(context.Exception, "JWT-аутентификация не прошла.");
                 return Task.CompletedTask;
             },
+            OnTokenValidated = async context =>
+            {
+                // Роль берётся из подписанного токена, но блокировку проверяем
+                // по БД на каждом запросе: JWT отозвать нельзя, а забаненный
+                // пользователь не должен ходить со старым живым токеном.
+                var users = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+                var value = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (!Guid.TryParse(value, out var userId) || userId == Guid.Empty)
+                {
+                    context.Fail("В токене нет идентификатора пользователя.");
+                    return;
+                }
+
+                var user = await users.FindByIdAsync(userId, context.HttpContext.RequestAborted);
+                if (user is null)
+                {
+                    context.Fail("Пользователь из токена не найден.");
+                    return;
+                }
+
+                if (user.IsBlocked)
+                {
+                    context.Fail("Аккаунт заблокирован.");
+                }
+            },
             OnChallenge = async context =>
             {
                 context.HandleResponse();
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                context.Response.ContentType = "application/json; charset=utf-8";
-                var payload = new ErrorResponse(Messages.Unauthorized);
-                await context.Response.WriteAsync(
-                    JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+                await WriteErrorAsync(context.HttpContext, StatusCodes.Status401Unauthorized, Messages.Unauthorized);
+            },
+            OnForbidden = async context =>
+            {
+                // По умолчанию ASP.NET отдаёт 403 с пустым телом — сохраняем
+                // единый формат ошибок для всех кодов.
+                await WriteErrorAsync(context.HttpContext, StatusCodes.Status403Forbidden, Messages.Forbidden);
             },
         };
+    }
+
+    /// <summary>Пишет единый JSON-ответ <c>{ message, errors? }</c>.</summary>
+    private static async Task WriteErrorAsync(HttpContext context, int statusCode, string message)
+    {
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json; charset=utf-8";
+        var payload = new ErrorResponse(message);
+        await context.Response.WriteAsync(
+            JsonSerializer.Serialize(payload, new JsonSerializerOptions(JsonSerializerDefaults.Web)));
     }
 }

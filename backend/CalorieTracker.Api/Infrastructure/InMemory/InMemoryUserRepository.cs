@@ -1,3 +1,4 @@
+using CalorieTracker.Api.Domain.Common;
 using CalorieTracker.Api.Domain.Entities;
 using CalorieTracker.Api.Domain.Repositories;
 
@@ -83,5 +84,40 @@ public sealed class InMemoryUserRepository : IUserRepository
         }
 
         return Task.CompletedTask;
+    }
+
+    public Task<PagedResult<User>> GetPagedAsync(
+        Pagination pagination,
+        string? search,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_db.SyncRoot)
+        {
+            var term = search?.Trim();
+            var query = _db.Users.Values.AsEnumerable();
+            if (!string.IsNullOrEmpty(term))
+            {
+                query = query.Where(user =>
+                    user.Name.Value.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || user.Email.Value.Contains(term, StringComparison.OrdinalIgnoreCase));
+            }
+
+            var ordered = query
+                .OrderByDescending(user => user.CreatedAt)
+                .ThenBy(user => user.Id)
+                .ToList();
+
+            var items = ordered
+                .Skip(pagination.Skip)
+                .Take(pagination.PageSize)
+                .ToList();
+
+            return Task.FromResult(new PagedResult<User>(
+                items,
+                pagination.Page,
+                pagination.PageSize,
+                ordered.Count));
+        }
     }
 }
