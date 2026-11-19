@@ -44,8 +44,17 @@ describe('SidebarComponent', () => {
     expect(text('[data-test="user-initial"]')).toBe('?');
   });
 
+  it('пункт «Пользователи» виден только администратору', () => {
+    expect(fixture.nativeElement.querySelector('[data-test="nav-admin"]')).toBeNull();
+
+    user.set({ id: 'u1', name: 'Админ', email: 'admin@example.com', role: 'admin' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-test="nav-admin"]')).not.toBeNull();
+  });
+
   it('показывает имя, email и инициал пользователя', () => {
-    user.set({ id: 'u1', name: 'Алексей', email: 'alex@example.com' });
+    user.set({ id: 'u1', name: 'Алексей', email: 'alex@example.com', role: 'user' });
     fixture.detectChanges();
 
     expect(text('[data-test="user-name"]')).toBe('Алексей');

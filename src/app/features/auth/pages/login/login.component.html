@@ -39,6 +39,10 @@
           </app-button>
         </form>
 
+        @if (errorMessage()) {
+          <p class="login-error" role="alert" data-test="login-error">{{ errorMessage() }}</p>
+        }
+
         <p class="login-footer">
           Нет аккаунта?
           <a routerLink="/register" class="register-link" data-test="register-link">Зарегистрироваться</a>

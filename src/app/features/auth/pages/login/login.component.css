@@ -31,6 +31,15 @@
       flex-direction: column;
       gap: 16px;
     }
+    .login-error {
+      margin: 16px 0 0 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(220, 38, 38, 0.12);
+      color: #dc2626;
+      font-size: 13px;
+      text-align: center;
+    }
     .login-footer {
       text-align: center;
       font-size: 13px;

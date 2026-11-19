@@ -10,11 +10,13 @@ import { LoginComponent } from './login.component';
 
 interface LoginInternals {
   form: FormGroup;
+  errorMessage: () => string;
   onSubmit(): Promise<void>;
 }
 
-const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com' };
+const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com', role: 'user' };
 const WRONG: ApiError = { status: 401, body: { message: 'Неверный email или пароль' } };
+const BLOCKED: ApiError = { status: 403, body: { message: 'Аккаунт заблокирован' } };
 
 describe('LoginComponent', () => {
   let fixture: ComponentFixture<LoginComponent>;
@@ -67,6 +69,20 @@ describe('LoginComponent', () => {
     await component.onSubmit();
 
     expect(notifyError).toHaveBeenCalledWith('Неверный email или пароль');
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it('заблокированный аккаунт (403): текст показан на странице, без редиректа', async () => {
+    auth.login.and.returnValue(throwError(() => BLOCKED));
+    component.form.setValue({ email: 'alex@example.com', password: 'Demo1234!' });
+
+    await component.onSubmit();
+    fixture.detectChanges();
+
+    expect(component.errorMessage()).toBe('Аккаунт заблокирован');
+    expect(fixture.nativeElement.querySelector('[data-test="login-error"]')?.textContent).toContain(
+      'Аккаунт заблокирован',
+    );
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 });

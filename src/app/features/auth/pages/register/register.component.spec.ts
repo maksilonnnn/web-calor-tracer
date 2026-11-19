@@ -14,7 +14,7 @@ interface RegisterInternals {
   confirmPasswordError(): string;
 }
 
-const ME: UserDto = { id: 'u1', name: 'Пётр', email: 'petr@example.com' };
+const ME: UserDto = { id: 'u1', name: 'Пётр', email: 'petr@example.com', role: 'user' };
 const TAKEN: ApiError = {
   status: 409,
   body: { message: 'Пользователь с таким email уже существует' },

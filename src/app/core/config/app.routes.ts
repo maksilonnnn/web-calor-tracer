@@ -3,18 +3,20 @@
  *
  * Схема:
  *  - авторизованная часть — оболочка AppShell под authGuard: '' (дашборд),
- *    'diary', 'settings' — чистые маршруты фич;
+ *    'diary', 'settings', 'admin' — чистые маршруты фич; /admin дополнительно
+ *    под adminGuard (роль проверяется и на бэкенде);
  *  - гостевая часть — /register, /login под guestGuard, вне оболочки;
  *  - '**' — homeGuard: есть сессия → '/', иначе → '/login'.
  */
 import { Routes } from '@angular/router';
 
 import { AppShellComponent } from '../../layout/app-shell/app-shell.component';
+import { ADMIN_ROUTES } from '../../features/admin/admin.routes';
 import { AUTH_ROUTES } from '../../features/auth/auth.routes';
 import { DASHBOARD_ROUTES } from '../../features/dashboard/dashboard.routes';
 import { DIARY_ROUTES } from '../../features/diary/diary.routes';
 import { SETTINGS_ROUTES } from '../../features/settings/settings.routes';
-import { authGuard, guestGuard, homeGuard } from '../navigation/guards';
+import { adminGuard, authGuard, guestGuard, homeGuard } from '../navigation/guards';
 
 export const routes: Routes = [
   {
@@ -25,6 +27,7 @@ export const routes: Routes = [
       { path: '', children: DASHBOARD_ROUTES },
       { path: 'diary', children: DIARY_ROUTES },
       { path: 'settings', children: SETTINGS_ROUTES },
+      { path: 'admin', canActivate: [adminGuard], children: ADMIN_ROUTES },
     ],
   },
   {

@@ -3,7 +3,7 @@
  * регистрации. Успех — переход на домашний маршрут; отказ бэкенда
  * показывается дословно через NotificationService.
  */
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -37,12 +37,16 @@ export class LoginComponent {
 
   protected readonly submitState = submitting();
 
+  /** Текст отказа под формой (в т. ч. 403 «Аккаунт заблокирован»). */
+  protected readonly errorMessage = signal('');
+
   protected readonly form = new FormGroup({
     email: new FormControl('', { nonNullable: true, validators: [requiredTrim(), emailFormat()] }),
     password: new FormControl('', { nonNullable: true, validators: [requiredTrim()] }),
   });
 
   async onSubmit(): Promise<void> {
+    this.errorMessage.set('');
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.notifications.notifyError(INVALID_FORM_MESSAGE);
@@ -55,7 +59,11 @@ export class LoginComponent {
         await firstValueFrom(this.auth.login(input));
         await this.router.navigate(['/']);
       } catch (error) {
-        this.notifications.notifyError(toApiError(error).body.message);
+        // 403 «Аккаунт заблокирован» — не редирект, а понятный текст на
+        // странице (401 обрабатывает интерцептор/сообщение бэкенда).
+        const message = toApiError(error).body.message;
+        this.errorMessage.set(message);
+        this.notifications.notifyError(message);
       }
     });
   }

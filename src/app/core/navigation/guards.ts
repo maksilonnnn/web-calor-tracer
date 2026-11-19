@@ -12,6 +12,10 @@
  *
  * Редиректы возвращаются как UrlTree; guards не знают о маршрутах фич,
  * кроме фиксированных /, /login.
+ *
+ * adminGuard дополнительно проверяет роль из /auth/me: страница
+ * администрирования доступна только роли admin. Это UX-защита; настоящая
+ * авторизация выполняется на бэкенде атрибутом [Authorize(Roles = "admin")].
  */
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
@@ -83,4 +87,20 @@ export const homeGuard: CanActivateFn = async () => {
     inject(GlobalLoaderService),
   );
   return me !== null ? toHome(router) : toLogin(router);
+};
+
+/**
+ * Админ-страницы: роль admin → доступ; обычный пользователь → на главную;
+ * нет сессии/сбой → /login.
+ */
+export const adminGuard: CanActivateFn = async () => {
+  const router = inject(Router);
+  const me = await resolveCurrentUser(
+    inject(AuthService),
+    inject(GlobalLoaderService),
+  );
+  if (me === null) {
+    return toLogin(router);
+  }
+  return me.role === 'admin' ? true : toHome(router);
 };

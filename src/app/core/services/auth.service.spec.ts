@@ -10,7 +10,7 @@ import { ApiError, UserDto } from '../../shared/models';
 import { apiErrorInterceptor } from '../http/api-error.interceptor';
 import { AuthService } from './auth.service';
 
-const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com' };
+const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com', role: 'user' };
 
 describe('AuthService — сервис домена Auth (HttpClient)', () => {
   let service: AuthService;

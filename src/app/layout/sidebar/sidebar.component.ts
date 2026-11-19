@@ -23,6 +23,9 @@ export class SidebarComponent {
     return name === '' ? '?' : name.charAt(0).toUpperCase();
   });
 
+  /** Пункт «Пользователи» виден только роли admin. */
+  protected readonly isAdmin = computed(() => this.user()?.role === 'admin');
+
   protected async logout(): Promise<void> {
     this.loader.show();
     try {
