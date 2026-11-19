@@ -46,6 +46,15 @@ public sealed class ForbiddenException : DomainException
     }
 }
 
+/// <summary>Вход в заблокированный аккаунт (HTTP 403, отдельный текст).</summary>
+public sealed class AccountBlockedException : DomainException
+{
+    public AccountBlockedException(string message)
+        : base(message)
+    {
+    }
+}
+
 /// <summary>Ресурс не найден либо принадлежит другому пользователю (HTTP 404).</summary>
 public sealed class NotFoundException : DomainException
 {

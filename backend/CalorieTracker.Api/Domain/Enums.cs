@@ -18,3 +18,13 @@ public enum WeightUnit
     G = 0,
     Kg = 1,
 }
+
+/// <summary>
+/// Роль пользователя. В БД и JWT хранится строкой в нижнем регистре
+/// (<c>user</c>/<c>admin</c>), см. <c>DbEnums</c> и <c>UserRoles</c>.
+/// </summary>
+public enum UserRole
+{
+    User = 0,
+    Admin = 1,
+}

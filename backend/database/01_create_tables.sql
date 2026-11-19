@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS users (
     name          varchar(100) NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 100),
     email         varchar(254) NOT NULL,
     password_hash text         NOT NULL CHECK (btrim(password_hash) <> ''),
-    created_at    timestamptz  NOT NULL DEFAULT now()
+    created_at    timestamptz  NOT NULL DEFAULT now(),
+    role          text         NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    is_blocked    boolean      NOT NULL DEFAULT false
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email ON users (lower(email));
 

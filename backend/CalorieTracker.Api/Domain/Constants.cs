@@ -13,6 +13,7 @@ public static class ValidationTexts
     public const string PasswordLetter = "Пароль должен содержать хотя бы одну букву";
     public const string PasswordSpecial = "Пароль должен содержать хотя бы один специальный знак";
     public const string PasswordMismatch = "Пароли не совпадают";
+    public const string PasswordCommon = "Пароль слишком простой";
     public const string EmailFormat = "Введите корректный email";
     public const string EmailLength = "Email — не более 254 символов";
     public const string NameLength = "Имя — от 1 до 100 символов";
@@ -38,6 +39,10 @@ public static class Messages
     public const string Forbidden = "Доступ запрещён";
     public const string EmailTaken = "Пользователь с таким email уже существует";
     public const string WrongCredentials = "Неверный email или пароль";
+    public const string AccountBlocked = "Аккаунт заблокирован";
+    public const string UserNotFound = "Пользователь не найден";
+    public const string CannotChangeOwnBlock = "Нельзя изменить блокировку собственного аккаунта";
+    public const string CannotChangeAdminBlock = "Нельзя изменить блокировку администратора";
     public const string WrongCurrentPassword = "Неверный текущий пароль";
     public const string NotFound = "Запись не найдена";
     public const string InvalidDate = "Некорректная дата";

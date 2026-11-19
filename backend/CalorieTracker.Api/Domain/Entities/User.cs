@@ -20,18 +20,28 @@ public sealed class User
 
     public DateTimeOffset CreatedAt { get; }
 
+    /// <summary>Роль пользователя. Меняется только SQL-скриптом/сидом, не через API.</summary>
+    public UserRole Role { get; private set; }
+
+    /// <summary>Заблокирован ли аккаунт. Заблокированный не входит и теряет живую сессию.</summary>
+    public bool IsBlocked { get; private set; }
+
     private User(
         Guid id,
         PersonName name,
         Email email,
         string passwordHash,
-        DateTimeOffset createdAt)
+        DateTimeOffset createdAt,
+        UserRole role,
+        bool isBlocked)
     {
         Id = id;
         Name = name;
         Email = email;
         PasswordHash = passwordHash;
         CreatedAt = createdAt;
+        Role = role;
+        IsBlocked = isBlocked;
     }
 
     public static User Create(
@@ -39,8 +49,23 @@ public sealed class User
         Email email,
         string passwordHash,
         Guid? id = null,
-        DateTimeOffset? createdAt = null) =>
-        new(id ?? Guid.NewGuid(), name, email, passwordHash, createdAt ?? DateTimeOffset.UtcNow);
+        DateTimeOffset? createdAt = null,
+        UserRole role = UserRole.User,
+        bool isBlocked = false) =>
+        new(
+            id ?? Guid.NewGuid(),
+            name,
+            email,
+            passwordHash,
+            createdAt ?? DateTimeOffset.UtcNow,
+            role,
+            isBlocked);
+
+    /// <summary>Заблокировать аккаунт (идемпотентно).</summary>
+    public void Block() => IsBlocked = true;
+
+    /// <summary>Разблокировать аккаунт (идемпотентно).</summary>
+    public void Unblock() => IsBlocked = false;
 
     /// <summary>Обновление профиля (имя и email уже провалидированы).</summary>
     public void UpdateProfile(PersonName name, Email email)
