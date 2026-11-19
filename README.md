@@ -35,10 +35,15 @@ psql -h localhost -U postgres -d calorie-tracker-web -f database/01_create_table
 
 # 02 — добавить position (если её ещё нет) и загрузить каталог продуктов.
 psql -h localhost -U postgres -d calorie-tracker-web -f database/02_alter_and_seed.sql
+
+# 03 — добавить колонки роли и блокировки (идемпотентно).
+psql -h localhost -U postgres -d calorie-tracker-web -f database/03_add_auth_columns.sql
 ```
 
-`00` не пересоздаёт существующую базу, `02` можно запускать повторно: каталог
-не задублируется. Демо-пользователи SQL-скриптами **не создаются**.
+`00` не пересоздаёт существующую базу, `02` и `03` можно запускать повторно:
+каталог не задублируется, существующие роли и блокировки не изменятся.
+Демо-пользователи SQL-скриптами **не создаются**; первый администратор
+назначается вручную (см. «Роли и авторизация»).
 
 ### 2. Backend (из корня репозитория)
 
@@ -64,9 +69,10 @@ npm start
 ```
 
 В режиме `Postgres` демо-учётка не создаётся — зарегистрируйте пользователя
-через UI или `POST /api/v1/auth/register`. Демо-учётка
-**alex@example.com / Demo1234!** и демо-дневник есть только в режиме
-`InMemory` (тесты и запуск без PostgreSQL).
+через UI или `POST /api/v1/auth/register`. Демо-учётки
+**alex@example.com / Demo1234!** (роль `user`) и
+**admin@example.com / Admin1234!** (роль `admin`), а также демо-дневник есть
+только в режиме `InMemory` (тесты и запуск без PostgreSQL).
 
 ## Backend
 
@@ -75,17 +81,17 @@ npm start
 ```
 backend/
   CalorieTracker.sln
-  database/            # 00_create_database.sql, 01_create_tables.sql, 02_alter_and_seed.sql
+  database/            # 00_create_database.sql, 01_create_tables.sql, 02_alter_and_seed.sql, 03_add_auth_columns.sql
   CalorieTracker.Api/
     Domain/            # ядро: сущности, объекты-значения, сервисы, интерфейсы репозиториев
       Common/          # PagedResult<T>, пагинация, парсер дат, ошибки валидации
       Entities/        # User, UserSettings, Product, DiaryEntry, Meal, MealItem
       ValueObjects/    # Email, PersonName, ProductName, NutritionFacts, GramAmount
-      Services/        # AuthService, DiaryService, DashboardService, SettingsService, ProfileService, ProductService
+      Services/        # AuthService, UserAdminService, DiaryService, DashboardService, SettingsService, ProfileService, ProductService
       Repositories/    # интерфейсы репозиториев
       Nutrition/       # расчёт пищевой ценности
       Models/          # команды и модели дашборда
-      Security/        # контракты хеширования и токенов
+      Security/        # контракты хеширования/токенов + константы ролей UserRoles
     Infrastructure/    # PostgreSQL/InMemory, безопасность, настройки, DI
       Postgres/        # SQL-репозитории (Npgsql) + EF Core (пользователи, настройки)
       InMemory/        # InMemoryDatabase + репозитории на словарях
@@ -94,7 +100,7 @@ backend/
       Options/         # Auth/Cors/Persistence/Seed
       DependencyInjection.cs
     Presentation/      # REST-контроллеры, DTO, middleware, DI
-      Controllers/     # Auth, Diary, Dashboard, Settings, Me, Products, Health
+      Controllers/     # Auth, UsersAdmin, Diary, Dashboard, Settings, Me, Products, Health
       Contracts/       # DTO запросов/ответов
       Middleware/      # RequestLogging, ExceptionHandling
       Mapping/         # DtoMapper
@@ -149,8 +155,9 @@ dotnet run --project CalorieTracker.Api
 | Скрипт                    | Что делает                                                                 |
 |---------------------------|----------------------------------------------------------------------------|
 | `00_create_database.sql`  | Создаёт базу `calorie-tracker-web` (повторный запуск пропускается).         |
-| `01_create_tables.sql`    | Создаёт таблицы, ограничения, индексы и колонку `meal_items.position`.      |
+| `01_create_tables.sql`    | Создаёт таблицы, ограничения, индексы, `meal_items.position`, `users.role` и `users.is_blocked`. |
 | `02_alter_and_seed.sql`   | Идемпотентно добавляет `position`, если её не было, и 8 продуктов каталога. |
+| `03_add_auth_columns.sql` | Идемпотентно добавляет `users.role` (`user`/`admin`) и `users.is_blocked` для уже созданной базы. |
 
 Репозитории разделены по технологиям:
 
@@ -183,9 +190,11 @@ $env:Persistence__Provider = "InMemory"
 dotnet run --project CalorieTracker.Api
 ```
 
-В этом режиме при старте работает `DatabaseSeeder` (демо-учётка и дневник).
-Интеграционные тесты принудительно используют `InMemory` через
-`CalorieTrackerFactory` и не требуют запущенной базы.
+В этом режиме при старте работает `DatabaseSeeder`: обычная демо-учётка
+`alex@example.com / Demo1234!`, администратор `admin@example.com / Admin1234!`,
+каталог продуктов и демо-дневник. Интеграционные тесты принудительно
+используют `InMemory` через `CalorieTrackerFactory` и не требуют запущенной
+базы.
 
 ### Swagger
 
@@ -203,11 +212,12 @@ dotnet test CalorieTracker.sln
 
 xUnit: доменные unit-тесты (объекты-значения, расчёты, валидация) и
 интеграционные тесты через `WebApplicationFactory` (успешные сценарии,
-400/401/404/409, границы пагинации, `totalCount`, доступ к чужим данным → 404,
-формат ошибок, отсутствие `passwordHash` в ответах). Интеграционные тесты
-работают на `InMemory`, поэтому весь набор из 74 тестов не требует PostgreSQL:
-`CalorieTrackerFactory` выставляет `Persistence__Provider=InMemory` до
-регистрации сервисов.
+400/401/403/404/409, роли и блокировка, границы пагинации, `totalCount`,
+доступ к чужим данным → 404, единый формат ошибок, отсутствие `passwordHash`
+в ответах). Интеграционные тесты работают на `InMemory`, поэтому весь набор
+из 84 тестов (83 выполняются, 1 пропущен как требующий PostgreSQL) не требует
+запущенной базы: `CalorieTrackerFactory` выставляет
+`Persistence__Provider=InMemory` до регистрации сервисов.
 
 ### REST API (`/api/v1`)
 
@@ -230,10 +240,14 @@ xUnit: доменные unit-тесты (объекты-значения, рас
 | `PUT  /me/password`                      | 204   | Смена пароля                                           |
 | `DELETE /me`                             | 204   | Удалить аккаунт вместе с данными                       |
 | `GET  /products?page&pageSize`           | 200   | Каталог продуктов постранично (по названию)            |
+| `GET  /admin/users?page&pageSize&search` | 200   | Админ-список пользователей (роль `admin`)              |
+| `PUT  /admin/users/{id}/block`           | 200   | Заблокировать пользователя (роль `admin`)              |
+| `PUT  /admin/users/{id}/unblock`         | 200   | Разблокировать пользователя (роль `admin`)             |
 | `GET  /health`                           | 200   | Проверка живости (без авторизации)                     |
 
 Все методы, кроме `health`, `auth/register`, `auth/login`, требуют
-аутентификации. Идентификаторы — строки uuid, даты — `YYYY-MM-DD`, перечисления
+аутентификации. Методы `/admin/*` дополнительно требуют роль `admin`.
+Идентификаторы — строки uuid, даты — `YYYY-MM-DD`, перечисления
 — строки в нижнем регистре; JSON в camelCase.
 
 ### Формат ошибок
@@ -252,8 +266,9 @@ xUnit: доменные unit-тесты (объекты-значения, рас
 |----:|---------------------------------------------------------------------------|
 | 400 | `Данные заполнены неверно` (+ `errors`), `Некорректная дата`, `Некорректный идентификатор`, `Неверный текущий пароль` |
 | 401 | `Не авторизован` (вход — `Неверный email или пароль`)                     |
-| 404 | `Запись не найдена` (в т. ч. для чужих ресурсов — защита от IDOR)         |
-| 409 | `Пользователь с таким email уже существует`                               |
+| 403 | `Доступ запрещён` (нет роли admin), `Аккаунт заблокирован` (вход)         |
+| 404 | `Запись не найдена` (в т. ч. для чужих ресурсов — защита от IDOR), `Пользователь не найден` |
+| 409 | `Пользователь с таким email уже существует`, запрет менять блокировку себя/администратора |
 
 ### Аутентификация
 
@@ -263,6 +278,33 @@ xUnit: доменные unit-тесты (объекты-значения, рас
   постоянным временем.
 - `userId` берётся **только** из claims токена; все данные фильтруются по
   пользователю (идемпотентная защита от IDOR).
+- Простые пароли (`12345678`, `qwerty123`, `password` и т. п.) отклоняются
+  одинаково на клиенте и на сервере (`password.common`).
+
+### Роли и авторизация
+
+Ролей две: `user` (по умолчанию) и `admin`; незалогиненный посетитель — гость.
+
+- Роль хранится в `users.role` (SQL/сид) и попадает claim'ом
+  `ClaimTypes.Role` в JWT. Админ-методы защищены на бэкенде атрибутом
+  `[Authorize(Roles = UserRoles.Admin)]`; скрытие пункта меню — только UX.
+- Блокировка — `users.is_blocked`. Заблокированный пользователь получает
+  `403 «Аккаунт заблокирован»` при входе. Кроме того, `OnTokenValidated`
+  проверяет пользователя и флаг в БД на **каждом** запросе, поэтому старая
+  живая cookie перестаёт работать (`401`) сразу после блокировки.
+- 401 и 403 отдаются в едином формате `{ "message": "…" }` (обработчики
+  `OnChallenge`/`OnForbidden` JwtBearer).
+- Назначить первого администратора в PostgreSQL можно только вручную:
+
+  ```sql
+  UPDATE users SET role = 'admin' WHERE email = 'admin@example.com';
+  ```
+
+  API-эндпоинтов выдачи роли нет: регистрация всегда создаёт `user`.
+- Блокировать/разблокировать нельзя самого себя и других администраторов
+  (`409`); несуществующий id → `404`.
+- В InMemory-режиме администратор создаётся сидом:
+  `admin@example.com / Admin1234!`.
 
 ### Middleware
 
@@ -276,9 +318,10 @@ xUnit: доменные unit-тесты (объекты-значения, рас
 `Infrastructure/InMemory` — потокобезопасные словари `InMemoryDatabase` и
 репозитории на их основе. Режим включается через
 `Persistence:Provider=InMemory` и используется интеграционными тестами.
-`DatabaseSeeder` вызывается только в этом режиме и создаёт демо-учётку,
-каталог и дневник; в `Postgres` он не запускается, поэтому демо-пользователи
-в реальной базе не появляются.
+`DatabaseSeeder` вызывается только в этом режиме и создаёт две демо-учётки —
+`alex@example.com / Demo1234!` (`user`) и `admin@example.com / Admin1234!`
+(`admin`) — каталог и дневник; в `Postgres` он не запускается, поэтому
+демо-пользователи в реальной базе не появляются.
 
 ## Frontend
 
@@ -313,6 +356,10 @@ npm test
   к доменной форме `ApiError { status, body: { message, errors? } }`;
 - 401 на защищённых запросах сбрасывает кэш пользователя и ведёт на `/login`
   (для `/auth/*` редиректа нет — этим управляет `AuthService.loadMe()`);
+  если пользователя заблокировали во время сессии, первый же запрос вернёт
+  401 и сессия будет сброшена;
+- 403 не редиректит: на странице входа текст «Аккаунт заблокирован»
+  показывается пользователю.
 - в дев-режиме запросы проксируются на Kestrel через `proxy.conf.json`.
 
 Сессия не хранится в `localStorage`: guards вызывают `AuthService.loadMe()`
@@ -325,8 +372,8 @@ src/app/
   core/
     config/        app.config.ts, app.routes.ts, api-base-url.ts
     http/          api-prefix.interceptor.ts, api-error.interceptor.ts
-    navigation/    guards.ts
-    services/      auth, diary, dashboard, settings, profile, product, theme
+    navigation/    guards.ts (authGuard, guestGuard, homeGuard, adminGuard)
+    services/      auth, admin, diary, dashboard, settings, profile, product, theme
   shared/
     models.ts, api-error.ts, dates.ts, calculations.ts, units.ts
     validation/    validators.ts, error-texts.ts
@@ -338,6 +385,7 @@ src/app/
     app-shell/     сайдбар + <router-outlet />
     sidebar/
   features/
+    admin/         pages/users/ (только для роли admin)
     auth/          pages/login/, pages/register/
     dashboard/     pages/dashboard/, components/add-food-modal/
     diary/         pages/diary/
@@ -348,11 +396,15 @@ src/app/
 компонента четыре файла (`.ts` + `.html` + `.css` + `.spec.ts`); состояние —
 сигналы; все компоненты `ChangeDetectionStrategy.OnPush`.
 
+Маршрут `/admin` подключён внутри `AppShell` и защищён `adminGuard` (роль
+берётся из `GET /auth/me`); пункт «Пользователи» в сайдбаре виден только
+администратору. Настоящая проверка роли выполняется на бэкенде.
+
 ## Тесты (итог)
 
 ```powershell
-cd backend;                 dotnet test CalorieTracker.sln   # 74 теста
-cd ..;                      npm test                          # 190 тестов
+cd backend;                 dotnet test CalorieTracker.sln   # 84 теста (83 выполнены, 1 пропущен)
+cd ..;                      npm test                          # 211 тестов
 ```
 
 ## Документация
