@@ -20,6 +20,35 @@ public static partial class DomainValidation
     /// <summary>Верхняя граница питательного значения на 100 г.</summary>
     public const double MaxNutrientPer100g = 10_000;
 
+    /// <summary>
+    /// Чёрный список типовых паролей (сравнение без учёта регистра).
+    /// Не даёт зарегистрироваться с паролем, который легко подобрать.
+    /// </summary>
+    private static readonly HashSet<string> CommonPasswords = new(StringComparer.Ordinal)
+    {
+        "12345678",
+        "123456789",
+        "1234567890",
+        "87654321",
+        "11111111",
+        "00000000",
+        "12341234",
+        "qwerty",
+        "qwerty123",
+        "qwertyuiop",
+        "password",
+        "password1",
+        "password123",
+        "admin123",
+        "admin1234",
+        "letmein",
+        "welcome",
+        "iloveyou",
+        "abc12345",
+        "qazwsxedc",
+        "asdfghjkl",
+    };
+
     public static bool IsBlank(string? value) => string.IsNullOrWhiteSpace(value);
 
     /// <summary>Имя: обязательность и не более 100 символов (после trim).</summary>
@@ -62,7 +91,7 @@ public static partial class DomainValidation
             return new[] { ValidationTexts.Required };
         }
 
-        var errors = new List<string>(4);
+        var errors = new List<string>(5);
         if (value.Length < PasswordMinLength)
         {
             errors.Add(ValidationTexts.PasswordMin);
@@ -81,6 +110,11 @@ public static partial class DomainValidation
         if (value.All(char.IsLetterOrDigit))
         {
             errors.Add(ValidationTexts.PasswordSpecial);
+        }
+
+        if (CommonPasswords.Contains(value.ToLowerInvariant()))
+        {
+            errors.Add(ValidationTexts.PasswordCommon);
         }
 
         return errors;

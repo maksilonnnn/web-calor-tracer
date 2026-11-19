@@ -53,6 +53,34 @@ const SPECIAL_CHAR_PATTERN = /[^\p{L}\d]/u;
  */
 const EMAIL_PATTERN = /^[^\s@]+@([^\s@.]+\.)+[^\s@.]+$/;
 
+/**
+ * Чёрный список типовых паролей — зеркало DomainValidation.CommonPasswords
+ * на бэкенде. Сравнение без учёта регистра (значение приводится к нижнему).
+ */
+const COMMON_PASSWORDS = new Set([
+  '12345678',
+  '123456789',
+  '1234567890',
+  '87654321',
+  '11111111',
+  '00000000',
+  '12341234',
+  'qwerty',
+  'qwerty123',
+  'qwertyuiop',
+  'password',
+  'password1',
+  'password123',
+  'admin123',
+  'admin1234',
+  'letmein',
+  'welcome',
+  'iloveyou',
+  'abc12345',
+  'qazwsxedc',
+  'asdfghjkl',
+]);
+
 /** Собирает ошибки поля из кодов словаря; пустой перечень — ошибок нет. */
 function packErrors(keys: readonly FieldErrorKey[]): FieldErrors | null {
   return keys.length === 0
@@ -129,6 +157,9 @@ export function passwordRules(): ValidatorFn {
     }
     if (!SPECIAL_CHAR_PATTERN.test(value)) {
       violated.push('password.special');
+    }
+    if (COMMON_PASSWORDS.has(value.toLowerCase())) {
+      violated.push('password.common');
     }
     return packErrors(violated);
   };
