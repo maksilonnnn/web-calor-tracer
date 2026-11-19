@@ -1,0 +1,142 @@
+    .admin-page {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .page-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 4px 0 0 0;
+    }
+
+    .admin-card {
+      padding: 20px 24px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .search-field {
+      flex: 1 1 280px;
+      max-width: 420px;
+    }
+    .toolbar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .page-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 48px 0;
+    }
+    .page-loading-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .empty-state {
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .users-table th,
+    .users-table td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: middle;
+    }
+    .users-table th {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .users-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .cell-name {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .cell-email {
+      color: var(--text-secondary);
+    }
+    .actions-column {
+      text-align: right;
+    }
+    .cell-actions {
+      text-align: right;
+      white-space: nowrap;
+    }
+    .no-actions {
+      color: var(--text-secondary);
+    }
+
+    .role-badge,
+    .status-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      background: var(--bg-input);
+      color: var(--text-secondary);
+    }
+    .role-admin {
+      background: var(--accent-ring);
+      color: var(--accent-primary);
+    }
+    .status-blocked {
+      background: rgba(220, 38, 38, 0.12);
+      color: #dc2626;
+    }
+
+    .pagination {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+    .pagination-info {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .pagination-actions {
+      display: flex;
+      gap: 8px;
+    }

@@ -97,11 +97,22 @@ export interface DashboardData {
   goals: DashboardGoals;
 }
 
+/** Роль пользователя: обычный или администратор. */
+export type UserRole = 'user' | 'admin';
+
 /** Текущий пользователь — ответ auth.register/auth.login/auth.me (без пароля). */
 export interface UserDto {
   id: string;
   name: string;
   email: string;
+  role: UserRole;
+}
+
+/** Пользователь в админ-списке: роль, статус блокировки и дата создания. */
+export interface AdminUser extends UserDto {
+  isBlocked: boolean;
+  /** Дата создания в ISO-формате. */
+  createdAt: string;
 }
 
 /** Параметры auth.login. */
