@@ -10,7 +10,7 @@ import { ApiError, UserDto } from '../../shared/models';
 import { apiErrorInterceptor } from '../http/api-error.interceptor';
 import { ProfileService } from './profile.service';
 
-const ME: UserDto = { id: 'user-1', name: 'Алексей', email: 'alex@example.com' };
+const ME: UserDto = { id: 'user-1', login: 'alex', name: 'Алексей', email: 'alex@example.com', role: 'user' };
 
 describe('ProfileService — сервис домена Profile (HttpClient)', () => {
   let service: ProfileService;

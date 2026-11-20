@@ -21,7 +21,7 @@ interface DashboardInternals {
   onFoodAdded(): void;
 }
 
-const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com' };
+const ME: UserDto = { id: 'u1', login: 'alex', name: 'Алексей', email: 'alex@example.com', role: 'user' };
 
 const DATA: DashboardData = {
   date: '2026-01-01',

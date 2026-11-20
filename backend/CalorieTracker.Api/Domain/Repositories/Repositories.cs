@@ -12,6 +12,9 @@ public interface IUserRepository
 {
     Task<User?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>Поиск по логину без учёта регистра (вход и проверка занятости логина).</summary>
+    Task<User?> FindByLoginAsync(string login, CancellationToken cancellationToken = default);
+
     /// <summary>Поиск по email без учёта регистра.</summary>
     Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default);
 
@@ -28,6 +31,15 @@ public interface IUserRepository
     Task RemoveAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Постраничный список пользователей для админ-панели. Поиск по имени,
+    /// логину и email без учёта регистра; сортировка — сначала новые.
+    /// </summary>
+    Task<PagedResult<User>> GetPagedAsync(
+        Pagination pagination,
+        string? search,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>Репозиторий каталога продуктов.</summary>

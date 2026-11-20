@@ -1,8 +1,8 @@
     <div class="register-container">
       <app-card class="register-card">
         <div class="register-header">
-          <h1 class="register-title" data-test="register-title">Создать аккаунт</h1>
-          <p class="register-subtitle">Заполните форму для регистрации</p>
+          <h1 class="register-title" data-test="register-title">Регистрация</h1>
+          <p class="register-subtitle">Заполните форму для создания аккаунта</p>
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="register-form">
@@ -11,8 +11,19 @@
             type="text"
             placeholder="Введите ваше имя"
             formControlName="name"
+            hint="От 1 до 100 символов"
             [error]="nameError()"
             data-test="name-input"
+          />
+
+          <app-input
+            label="Логин"
+            type="text"
+            placeholder="Придумайте логин"
+            formControlName="login"
+            hint="От 1 до 100 символов, латиница; не меняется после регистрации"
+            [error]="loginError()"
+            data-test="login-input"
           />
 
           <app-input
@@ -29,6 +40,8 @@
             type="password"
             placeholder="Минимум 8 символов"
             formControlName="password"
+            hint="Не менее 8 символов; минимум одна цифра, одна буква и один спецзнак; пароли должны совпадать"
+            autocomplete="new-password"
             [error]="passwordError()"
             data-test="password-input"
           />
@@ -37,9 +50,10 @@
             label="Повторите пароль"
             type="password"
             placeholder="Повторите пароль"
-            formControlName="confirmPassword"
-            [error]="confirmPasswordError()"
-            data-test="confirm-password-input"
+            formControlName="repeatPassword"
+            autocomplete="new-password"
+            [error]="repeatPasswordError()"
+            data-test="repeat-password-input"
           />
 
           <app-button

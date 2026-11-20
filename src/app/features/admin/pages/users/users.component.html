@@ -1,0 +1,130 @@
+    <div class="admin-page">
+      <header class="page-header">
+        <div class="header-text">
+          <h1 class="page-title">Пользователи</h1>
+          <p class="page-subtitle">Управление доступом к приложению</p>
+        </div>
+      </header>
+
+      <app-card class="admin-card">
+        <div class="toolbar">
+          <app-input
+            class="search-field"
+            label="Поиск"
+            type="text"
+            placeholder="Имя, логин или email"
+            [formControl]="searchControl"
+            (keyup.enter)="onSearch()"
+            data-test="admin-search"
+          />
+          <div class="toolbar-actions">
+            <app-button variant="secondary" [disabled]="loading()" (click)="clearSearch()">
+              Сбросить
+            </app-button>
+            <app-button [loading]="loading()" (click)="onSearch()" data-test="admin-find">
+              Найти
+            </app-button>
+          </div>
+        </div>
+
+        @if (loading()) {
+          <div class="page-loading" data-test="admin-loading">
+            <app-spinner size="lg" label="Загрузка…" />
+            <p class="page-loading-text">Загрузка…</p>
+          </div>
+        } @else {
+          @if (users().length === 0) {
+            <p class="empty-state" data-test="admin-empty">Пользователи не найдены</p>
+          } @else {
+            <div class="table-wrap">
+              <table class="users-table">
+                <thead>
+                  <tr>
+                    <th>Имя</th>
+                    <th>Логин</th>
+                    <th>Email</th>
+                    <th>Роль</th>
+                    <th>Статус</th>
+                    <th>Создан</th>
+                    <th class="actions-column">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (user of users(); track user.id) {
+                    <tr data-test="admin-row">
+                      <td class="cell-name">{{ user.name }}</td>
+                      <td class="cell-login">{{ user.login }}</td>
+                      <td class="cell-email">{{ user.email }}</td>
+                      <td>
+                        <span class="role-badge" [class.role-admin]="user.role === 'admin'">
+                          {{ roleLabel(user.role) }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="status-badge" [class.status-blocked]="user.isBlocked">
+                          {{ user.isBlocked ? 'Заблокирован' : 'Активен' }}
+                        </span>
+                      </td>
+                      <td>{{ createdAt(user) }}</td>
+                      <td class="cell-actions">
+                        @if (canChangeBlock(user)) {
+                          @if (user.isBlocked) {
+                            <app-button
+                              size="sm"
+                              variant="secondary"
+                              [loading]="actionId() === user.id"
+                              (click)="toggleBlock(user)"
+                              data-test="admin-unblock"
+                            >
+                              Разблокировать
+                            </app-button>
+                          } @else {
+                            <app-button
+                              size="sm"
+                              variant="danger"
+                              [loading]="actionId() === user.id"
+                              (click)="toggleBlock(user)"
+                              data-test="admin-block"
+                            >
+                              Заблокировать
+                            </app-button>
+                          }
+                        } @else {
+                          <span class="no-actions" title="Недоступно для себя и администраторов">—</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination" data-test="admin-pagination">
+              <span class="pagination-info">
+                Страница {{ page() }} из {{ totalPages() || 1 }} · всего {{ totalCount() }}
+              </span>
+              <div class="pagination-actions">
+                <app-button
+                  size="sm"
+                  variant="secondary"
+                  [disabled]="page() <= 1 || loading()"
+                  (click)="goToPage(page() - 1)"
+                  data-test="admin-prev"
+                >
+                  Назад
+                </app-button>
+                <app-button
+                  size="sm"
+                  variant="secondary"
+                  [disabled]="page() >= totalPages() || loading()"
+                  (click)="goToPage(page() + 1)"
+                  data-test="admin-next"
+                >
+                  Вперёд
+                </app-button>
+              </div>
+            </div>
+          }
+        }
+      </app-card>
+    </div>

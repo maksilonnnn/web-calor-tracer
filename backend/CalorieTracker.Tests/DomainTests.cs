@@ -46,9 +46,37 @@ public sealed class DomainTests
     }
 
     [Fact]
-    public void ConfirmPassword_Mismatch_ReturnsMismatch()
+    public void RepeatPassword_Mismatch_ReturnsMismatch()
     {
-        Assert.Equal(new[] { ValidationTexts.PasswordMismatch }, DomainValidation.ConfirmPassword("abc12345", "xyz12345"));
+        Assert.Equal(new[] { ValidationTexts.PasswordMismatch }, DomainValidation.RepeatPassword("abc12345", "xyz12345"));
+    }
+
+    [Fact]
+    public void Login_TooLong_ReturnsLengthText()
+    {
+        var value = new string('a', DomainValidation.LoginMaxLength + 1);
+        Assert.Equal(new[] { ValidationTexts.LoginLength }, DomainValidation.Login(value));
+    }
+
+    [Fact]
+    public void Login_BadCharset_ReturnsCharsetText()
+    {
+        Assert.Equal(new[] { ValidationTexts.LoginCharset }, DomainValidation.Login("иван!"));
+    }
+
+    [Fact]
+    public void Login_Valid_ReturnsNoErrors()
+    {
+        Assert.Empty(DomainValidation.Login(" alex.dot-1 "));
+    }
+
+    [Fact]
+    public void Login_ValueObject_TrimsAndComparesCaseInsensitively()
+    {
+        var a = Login.Create("  Alex.Dot-1 ");
+        var b = Login.Create("alex.dot-1");
+        Assert.Equal("Alex.Dot-1", a.Value);
+        Assert.True(a.Equals(b));
     }
 
     [Theory]

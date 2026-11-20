@@ -1,13 +1,14 @@
 /**
- * Страница входа (/login): реактивная форма email + пароль, стиль как у
- * регистрации. Успех — переход на домашний маршрут; отказ бэкенда
- * показывается дословно через NotificationService.
+ * Страница входа (/login): реактивная форма логин + пароль, стиль как у
+ * регистрации. Успех — переход на домашний маршрут роли (ROLE_HOME); отказ
+ * бэкенда показывается дословно через NotificationService.
  */
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { ROLE_HOME } from '../../../../core/navigation/guards';
 import { AuthService } from '../../../../core/services/auth.service';
 import { toApiError } from '../../../../shared/api-error';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -16,12 +17,7 @@ import { InputComponent } from '../../../../shared/components/input/input.compon
 import { submitting } from '../../../../shared/loading/submitting';
 import { NotificationService } from '../../../../shared/notifications/notification-service';
 import { INVALID_FORM_MESSAGE } from '../../../../shared/validation/error-texts';
-import {
-  emailFormat,
-  firstErrorText,
-  requiredTrim,
-  trimFormValues,
-} from '../../../../shared/validation/validators';
+import { firstErrorText, requiredTrim, trimFormValues } from '../../../../shared/validation/validators';
 
 @Component({
   selector: 'app-login',
@@ -37,31 +33,39 @@ export class LoginComponent {
 
   protected readonly submitState = submitting();
 
+  /** Текст отказа под формой (в т. ч. 403 «Аккаунт заблокирован»). */
+  protected readonly errorMessage = signal('');
+
   protected readonly form = new FormGroup({
-    email: new FormControl('', { nonNullable: true, validators: [requiredTrim(), emailFormat()] }),
+    login: new FormControl('', { nonNullable: true, validators: [requiredTrim()] }),
     password: new FormControl('', { nonNullable: true, validators: [requiredTrim()] }),
   });
 
   async onSubmit(): Promise<void> {
+    this.errorMessage.set('');
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.notifications.notifyError(INVALID_FORM_MESSAGE);
       return;
     }
     trimFormValues(this.form);
-    const input = this.form.getRawValue();
+    const params = this.form.getRawValue();
     await this.submitState.run(async () => {
       try {
-        await firstValueFrom(this.auth.login(input));
-        await this.router.navigate(['/']);
+        const me = await firstValueFrom(this.auth.login(params));
+        await this.router.navigate([ROLE_HOME[me.role]]);
       } catch (error) {
-        this.notifications.notifyError(toApiError(error).body.message);
+        // 403 «Аккаунт заблокирован» — не редирект, а понятный текст на
+        // странице (401 обрабатывает интерцептор/сообщение бэкенда).
+        const message = toApiError(error).body.message;
+        this.errorMessage.set(message);
+        this.notifications.notifyError(message);
       }
     });
   }
 
-  protected emailError(): string {
-    return this.fieldError(this.form.controls.email);
+  protected loginError(): string {
+    return this.fieldError(this.form.controls.login);
   }
 
   protected passwordError(): string {

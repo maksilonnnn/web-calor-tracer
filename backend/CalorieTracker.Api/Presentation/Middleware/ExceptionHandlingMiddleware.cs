@@ -37,6 +37,10 @@ public sealed class ExceptionHandlingMiddleware
         {
             await WriteAsync(context, StatusCodes.Status401Unauthorized, exception.Message);
         }
+        catch (AccountBlockedException exception)
+        {
+            await WriteAsync(context, StatusCodes.Status403Forbidden, exception.Message);
+        }
         catch (ForbiddenException exception)
         {
             await WriteAsync(context, StatusCodes.Status403Forbidden, exception.Message);

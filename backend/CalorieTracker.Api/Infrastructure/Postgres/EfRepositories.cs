@@ -1,5 +1,8 @@
+using CalorieTracker.Api.Domain;
+using CalorieTracker.Api.Domain.Common;
 using CalorieTracker.Api.Domain.Entities;
 using CalorieTracker.Api.Domain.Repositories;
+using CalorieTracker.Api.Domain.Security;
 using CalorieTracker.Api.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +15,8 @@ internal sealed class UserRecord
 {
     public Guid Id { get; set; }
 
+    public string Login { get; set; } = string.Empty;
+
     public string Name { get; set; } = string.Empty;
 
     public string Email { get; set; } = string.Empty;
@@ -19,6 +24,10 @@ internal sealed class UserRecord
     public string PasswordHash { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAt { get; set; }
+
+    public string Role { get; set; } = UserRoles.User;
+
+    public bool IsBlocked { get; set; }
 }
 
 internal sealed class UserSettingsRecord
@@ -81,6 +90,14 @@ internal sealed class EfUserRepository(CalorieTrackerDbContext db) : IUserReposi
         return record is null ? null : ToDomain(record);
     }
 
+    public async Task<User?> FindByLoginAsync(string login, CancellationToken cancellationToken = default)
+    {
+        var normalized = login.Trim().ToLower();
+        var record = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Login.ToLower() == normalized, cancellationToken);
+        return record is null ? null : ToDomain(record);
+    }
+
     public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var normalized = email.Trim().ToLower();
@@ -127,21 +144,59 @@ internal sealed class EfUserRepository(CalorieTrackerDbContext db) : IUserReposi
     public Task<int> CountAsync(CancellationToken cancellationToken = default) =>
         db.Users.CountAsync(cancellationToken);
 
+    public async Task<PagedResult<User>> GetPagedAsync(
+        Pagination pagination,
+        string? search,
+        CancellationToken cancellationToken = default)
+    {
+        IQueryable<UserRecord> query = db.Users.AsNoTracking();
+
+        var term = search?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrEmpty(term))
+        {
+            query = query.Where(u =>
+                u.Name.ToLower().Contains(term)
+                || u.Login.ToLower().Contains(term)
+                || u.Email.ToLower().Contains(term));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var records = await query
+            .OrderByDescending(u => u.CreatedAt)
+            .ThenBy(u => u.Id)
+            .Skip(pagination.Skip)
+            .Take(pagination.PageSize)
+            .ToListAsync(cancellationToken);
+
+        return new PagedResult<User>(
+            records.Select(ToDomain).ToList(),
+            pagination.Page,
+            pagination.PageSize,
+            totalCount);
+    }
+
     private static User ToDomain(UserRecord record) =>
         User.Create(
+            Login.Create(record.Login),
             PersonName.Create(record.Name),
             Email.Create(record.Email),
             record.PasswordHash,
             record.Id,
-            record.CreatedAt);
+            record.CreatedAt,
+            DbEnums.UserRoleFromDb(
+                string.IsNullOrWhiteSpace(record.Role) ? UserRoles.User : record.Role),
+            record.IsBlocked);
 
     private static UserRecord ToRecord(UserRecord record, User user)
     {
         record.Id = user.Id;
+        record.Login = user.Login.Value;
         record.Name = user.Name.Value;
         record.Email = user.Email.Value;
         record.PasswordHash = user.PasswordHash;
         record.CreatedAt = user.CreatedAt.ToUniversalTime(); // timestamptz принимает только UTC
+        record.Role = DbEnums.ToDb(user.Role);
+        record.IsBlocked = user.IsBlocked;
         return record;
     }
 }

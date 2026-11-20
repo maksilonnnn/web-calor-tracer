@@ -1,5 +1,6 @@
 using CalorieTracker.Api.Domain;
 using CalorieTracker.Api.Domain.Repositories;
+using CalorieTracker.Api.Domain.Security;
 using CalorieTracker.Api.Infrastructure.Postgres.Ef;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -39,6 +40,20 @@ internal static class DbEnums
         "g" => WeightUnit.G,
         "kg" => WeightUnit.Kg,
         _ => throw new InvalidOperationException($"Неизвестная единица веса в БД: {value}."),
+    };
+
+    public static string ToDb(UserRole role) => role switch
+    {
+        UserRole.User => UserRoles.User,
+        UserRole.Admin => UserRoles.Admin,
+        _ => throw new ArgumentOutOfRangeException(nameof(role), role, null),
+    };
+
+    public static UserRole UserRoleFromDb(string value) => value switch
+    {
+        UserRoles.User => UserRole.User,
+        UserRoles.Admin => UserRole.Admin,
+        _ => throw new InvalidOperationException($"Неизвестная роль пользователя в БД: {value}."),
     };
 }
 

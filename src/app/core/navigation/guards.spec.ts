@@ -10,9 +10,16 @@ import { Observable, of, throwError } from 'rxjs';
 
 import { UserDto } from '../../shared/models';
 import { AuthService } from '../services/auth.service';
-import { authGuard, guestGuard, homeGuard } from './guards';
+import { adminGuard, authGuard, guestGuard, homeGuard } from './guards';
 
-const ME: UserDto = { id: 'user-1', name: 'Алексей', email: 'alex@example.com' };
+const ME: UserDto = {
+  id: 'user-1',
+  login: 'alex',
+  name: 'Алексей',
+  email: 'alex@example.com',
+  role: 'user',
+};
+const ADMIN: UserDto = { ...ME, role: 'admin' };
 const HOME = '/';
 const LOGIN = '/login';
 
@@ -99,6 +106,32 @@ describe('navigation guards — доступ по сессии', () => {
       reply(throwError(() => new Error('нет сети')));
 
       expect(await runGuard(homeGuard)).toBe(LOGIN);
+    });
+  });
+
+  describe('adminGuard', () => {
+    it('роль admin — доступ разрешён', async () => {
+      reply(of(ADMIN));
+
+      expect(await runGuard(adminGuard)).toBeTrue();
+    });
+
+    it('обычный пользователь — редирект на домашний маршрут', async () => {
+      reply(of(ME));
+
+      expect(await runGuard(adminGuard)).toBe(HOME);
+    });
+
+    it('без сессии — редирект на /login', async () => {
+      reply(of(null));
+
+      expect(await runGuard(adminGuard)).toBe(LOGIN);
+    });
+
+    it('сбой загрузки сессии — /login', async () => {
+      reply(throwError(() => new Error('нет сети')));
+
+      expect(await runGuard(adminGuard)).toBe(LOGIN);
     });
   });
 });

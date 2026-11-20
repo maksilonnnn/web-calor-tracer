@@ -10,7 +10,13 @@ import { ApiError, UserDto } from '../../shared/models';
 import { apiErrorInterceptor } from '../http/api-error.interceptor';
 import { AuthService } from './auth.service';
 
-const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com' };
+const ME: UserDto = {
+  id: 'u1',
+  login: 'alex',
+  name: 'Алексей',
+  email: 'alex@example.com',
+  role: 'user',
+};
 
 describe('AuthService — сервис домена Auth (HttpClient)', () => {
   let service: AuthService;
@@ -34,15 +40,15 @@ describe('AuthService — сервис домена Auth (HttpClient)', () => {
     expect(service.currentUser()).toBeNull();
   });
 
-  it('login: POST auth/login, кэш currentUser заполнен', () => {
+  it('login: POST auth/login с логином, кэш currentUser заполнен', () => {
     let received: UserDto | undefined;
-    service.login({ email: 'alex@example.com', password: 'Demo1234!' }).subscribe({
+    service.login({ login: 'alex', password: 'Demo1234!' }).subscribe({
       next: (value) => (received = value),
     });
 
     const request = http.expectOne('auth/login');
     expect(request.request.method).toBe('POST');
-    expect(request.request.body).toEqual({ email: 'alex@example.com', password: 'Demo1234!' });
+    expect(request.request.body).toEqual({ login: 'alex', password: 'Demo1234!' });
     request.flush(ME);
 
     expect(received).toEqual(ME);
@@ -51,16 +57,16 @@ describe('AuthService — сервис домена Auth (HttpClient)', () => {
 
   it('login отказ: ApiError 401, кэш пуст', () => {
     let error: ApiError | undefined;
-    service.login({ email: 'alex@example.com', password: 'неверный' }).subscribe({
+    service.login({ login: 'alex', password: 'неверный' }).subscribe({
       error: (value: ApiError) => (error = value),
     });
 
     http
       .expectOne('auth/login')
-      .flush({ message: 'Неверный email или пароль' }, { status: 401, statusText: 'Unauthorized' });
+      .flush({ message: 'Неверный логин или пароль' }, { status: 401, statusText: 'Unauthorized' });
 
     expect(error?.status).toBe(401);
-    expect(error?.body.message).toBe('Неверный email или пароль');
+    expect(error?.body.message).toBe('Неверный логин или пароль');
     expect(service.currentUser()).toBeNull();
   });
 
@@ -69,22 +75,23 @@ describe('AuthService — сервис домена Auth (HttpClient)', () => {
     service
       .register({
         name: 'Пётр',
+        login: 'petr',
         email: 'petr@example.com',
         password: 'Demo1234!',
-        confirmPassword: 'Demo1234!',
+        repeatPassword: 'Demo1234!',
       })
       .subscribe({ next: (value) => (received = value) });
 
     const request = http.expectOne('auth/register');
     expect(request.request.method).toBe('POST');
-    request.flush({ id: 'u2', name: 'Пётр', email: 'petr@example.com' });
+    request.flush({ id: 'u2', login: 'petr', name: 'Пётр', email: 'petr@example.com' });
 
     expect(received?.email).toBe('petr@example.com');
     expect(service.currentUser()?.email).toBe('petr@example.com');
   });
 
   it('logout: POST auth/logout, кэш очищен', () => {
-    service.login({ email: 'alex@example.com', password: 'Demo1234!' }).subscribe();
+    service.login({ login: 'alex', password: 'Demo1234!' }).subscribe();
     http.expectOne('auth/login').flush(ME);
     expect(service.currentUser()).not.toBeNull();
 

@@ -11,13 +11,19 @@ import { RegisterComponent } from './register.component';
 interface RegisterInternals {
   form: FormGroup;
   onSubmit(): Promise<void>;
-  confirmPasswordError(): string;
+  repeatPasswordError(): string;
 }
 
-const ME: UserDto = { id: 'u1', name: 'Пётр', email: 'petr@example.com' };
+const ME: UserDto = {
+  id: 'u1',
+  login: 'petr',
+  name: 'Пётр',
+  email: 'petr@example.com',
+  role: 'user',
+};
 const TAKEN: ApiError = {
   status: 409,
-  body: { message: 'Пользователь с таким email уже существует' },
+  body: { message: 'Пользователь с таким логином уже существует' },
 };
 
 describe('RegisterComponent', () => {
@@ -29,9 +35,10 @@ describe('RegisterComponent', () => {
 
   const VALID = {
     name: 'Пётр',
+    login: 'petr',
     email: 'petr@example.com',
     password: 'Demo1234!',
-    confirmPassword: 'Demo1234!',
+    repeatPassword: 'Demo1234!',
   };
 
   beforeEach(() => {
@@ -60,39 +67,50 @@ describe('RegisterComponent', () => {
     expect(auth.register).not.toHaveBeenCalled();
   });
 
-  it('успех: значения с тримом, переход на главную', async () => {
+  it('недопустимый логин (кириллица): регистрация не вызывается', async () => {
+    component.form.setValue({ ...VALID, login: 'иван' });
+
+    await component.onSubmit();
+
+    expect(notifyError).toHaveBeenCalledWith('Данные заполнены неверно');
+    expect(auth.register).not.toHaveBeenCalled();
+  });
+
+  it('успех: значения с тримом, переход на домашний маршрут роли', async () => {
     component.form.setValue({
       name: '  Пётр  ',
+      login: '  petr ',
       email: '  petr@example.com ',
       password: 'Demo1234!',
-      confirmPassword: 'Demo1234!',
+      repeatPassword: 'Demo1234!',
     });
 
     await component.onSubmit();
 
     expect(auth.register).toHaveBeenCalledWith({
       name: 'Пётр',
+      login: 'petr',
       email: 'petr@example.com',
       password: 'Demo1234!',
-      confirmPassword: 'Demo1234!',
+      repeatPassword: 'Demo1234!',
     });
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
-  it('отказ бэкенда (занятый email) показывается дословно', async () => {
+  it('отказ бэкенда (занятый логин) показывается дословно', async () => {
     auth.register.and.returnValue(throwError(() => TAKEN));
     component.form.setValue(VALID);
 
     await component.onSubmit();
 
-    expect(notifyError).toHaveBeenCalledWith('Пользователь с таким email уже существует');
+    expect(notifyError).toHaveBeenCalledWith('Пользователь с таким логином уже существует');
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 
   it('несовпадение паролей даёт текст ошибки у поля повтора', () => {
-    component.form.controls['confirmPassword'].markAsTouched();
-    component.form.setValue({ ...VALID, confirmPassword: 'Другой123!' });
+    component.form.controls['repeatPassword'].markAsTouched();
+    component.form.setValue({ ...VALID, repeatPassword: 'Другой123!' });
 
-    expect(component.confirmPasswordError()).toBe('Пароли не совпадают');
+    expect(component.repeatPasswordError()).toBe('Пароли не совпадают');
   });
 });

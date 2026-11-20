@@ -114,7 +114,7 @@ public sealed class ProfileSettingsApiTests : IClassFixture<CalorieTrackerFactor
     public async Task Me_ChangePassword_Valid_AllowsLoginWithNewPassword()
     {
         var email = $"{Guid.NewGuid():N}@example.com";
-        var (client, _) = await _factory.RegisterAsync(email, password: "Passw0rd!");
+        var (client, user) = await _factory.RegisterAsync(email, password: "Passw0rd!");
 
         var change = await client.PutAsJsonAsync("/api/v1/me/password", new
         {
@@ -127,7 +127,7 @@ public sealed class ProfileSettingsApiTests : IClassFixture<CalorieTrackerFactor
         var fresh = _factory.CreateClient();
         var login = await fresh.PostAsJsonAsync("/api/v1/auth/login", new
         {
-            email,
+            login = user.Login,
             password = "BrandNew1!",
         });
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
@@ -155,7 +155,7 @@ public sealed class ProfileSettingsApiTests : IClassFixture<CalorieTrackerFactor
     public async Task Me_Delete_Returns204AndRevokesAccess()
     {
         var email = $"{Guid.NewGuid():N}@example.com";
-        var (client, _) = await _factory.RegisterAsync(email);
+        var (client, user) = await _factory.RegisterAsync(email);
 
         var response = await client.DeleteAsync("/api/v1/me");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -166,7 +166,7 @@ public sealed class ProfileSettingsApiTests : IClassFixture<CalorieTrackerFactor
 
         var login = await _factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login", new
         {
-            email,
+            login = user.Login,
             password = "Passw0rd!",
         });
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);

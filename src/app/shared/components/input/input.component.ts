@@ -26,6 +26,10 @@ export class InputComponent implements ControlValueAccessor {
   readonly label = input('');
   readonly type = input('text');
   readonly placeholder = input('');
+  /** Подсказка под полем: требования к значению (как в эталонном образце). */
+  readonly hint = input('');
+  /** Значение autocomplete native-поля ('new-password', 'username', …). */
+  readonly autocomplete = input('');
   readonly error = input('');
   /** Единица измерения справа внутри поля: «г», «ккал» и т.д. */
   readonly unit = input('');

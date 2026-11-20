@@ -27,7 +27,15 @@ public sealed class AuthController : ApiControllerBase
         _environment = environment;
     }
 
-    /// <summary>Регистрация нового пользователя. 201 + установка cookie с токеном.</summary>
+    /// <summary>
+    /// Регистрация нового пользователя (порядок отказов как в эталонном
+    /// образце): 400 «Данные заполнены неверно» с ошибками по ВСЕМ невалидным
+    /// полям сразу → 409 «Пользователь с таким логином уже существует»
+    /// (проверяется раньше email) → 409 «Пользователь с таким email уже
+    /// существует» → 201 + cookie с токеном. Роль в теле запроса отсутствует:
+    /// регистрация всегда создаёт пользователя с базовой ролью, пароль
+    /// сохраняется только в виде хеша PBKDF2.
+    /// </summary>
     [HttpPost("register")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
@@ -41,15 +49,20 @@ public sealed class AuthController : ApiControllerBase
         var result = await _auth.RegisterAsync(new RegisterCommand
         {
             Name = body.Name ?? string.Empty,
+            Login = body.Login ?? string.Empty,
             Email = body.Email ?? string.Empty,
             Password = body.Password ?? string.Empty,
-            ConfirmPassword = body.ConfirmPassword ?? string.Empty,
+            RepeatPassword = body.RepeatPassword ?? string.Empty,
         }, cancellationToken);
         AuthCookie.Write(Response, _options, _environment, result.Token);
         return StatusCode(StatusCodes.Status201Created, DtoMapper.ToDto(result.User));
     }
 
-    /// <summary>Вход. 200 + установка cookie с токеном; неверные данные → 401.</summary>
+    /// <summary>
+    /// Вход по логину. 200 + установка cookie с токеном; неверные данные →
+    /// 401 «Неверный логин или пароль» (текст един для неизвестного логина и
+    /// неверного пароля), заблокированный аккаунт → 403.
+    /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
@@ -61,7 +74,7 @@ public sealed class AuthController : ApiControllerBase
         var body = Body(request);
         var result = await _auth.LoginAsync(new LoginCommand
         {
-            Email = body.Email ?? string.Empty,
+            Login = body.Login ?? string.Empty,
             Password = body.Password ?? string.Empty,
         }, cancellationToken);
         AuthCookie.Write(Response, _options, _environment, result.Token);

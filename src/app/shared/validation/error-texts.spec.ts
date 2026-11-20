@@ -16,6 +16,7 @@ describe('error-texts — словарь текстов ошибок', () => {
     expect(ERROR_TEXTS['password.letter']).toBeTruthy();
     expect(ERROR_TEXTS['password.special']).toBeTruthy();
     expect(ERROR_TEXTS['password.mismatch']).toBe('Пароли не совпадают');
+    expect(ERROR_TEXTS['password.common']).toBe('Пароль слишком простой');
   });
 
   it('текст невалидной формы — единый', () => {

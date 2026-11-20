@@ -54,6 +54,13 @@ describe('validators — правила клиентской валидации'
       expect(errorsOf(new FormControl('Demo1234!', { validators: passwordRules() }))).toBeNull();
       expect(errorsOf(new FormControl('', { validators: passwordRules() }))).toBeNull();
     });
+
+    it('типовой пароль из чёрного списка отклоняется без учёта регистра', () => {
+      const control = new FormControl('Qwerty123', { validators: passwordRules() });
+
+      expect(control.hasError('password.common')).toBeTrue();
+      expect(controlErrorTexts(control)).toContain(ERROR_TEXTS['password.common']);
+    });
   });
 
   describe('passwordMatch', () => {

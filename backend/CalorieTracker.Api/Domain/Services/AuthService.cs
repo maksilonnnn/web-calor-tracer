@@ -11,10 +11,13 @@ namespace CalorieTracker.Api.Domain.Services;
 /// <summary>Служба аутентификации: регистрация, вход, чтение текущего пользователя.</summary>
 public interface IAuthService
 {
-    /// <summary>Регистрация: валидация полей → 409 при занятом email → создание и вход.</summary>
+    /// <summary>
+    /// Регистрация: пакетная валидация всех полей → 409 при занятом логине
+    /// (раньше email) → создание с базовой ролью и хешем пароля → вход.
+    /// </summary>
     Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken cancellationToken = default);
 
-    /// <summary>Вход: единый 401 без раскрытия существования аккаунта.</summary>
+    /// <summary>Вход по логину: единый 401 без раскрытия существования аккаунта.</summary>
     Task<AuthResult> LoginAsync(LoginCommand command, CancellationToken cancellationToken = default);
 
     /// <summary>Текущий пользователь по id из токена; отсутствует → 401.</summary>
@@ -52,21 +55,34 @@ public sealed class AuthService : IAuthService
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Порядок валидации совпадает с формой: name, email, password, confirmPassword.
+        // Пакетная валидация ВСЕХ полей сразу; порядок совпадает с формой:
+        // name, login, email, password, repeatPassword.
         var errors = new ValidationErrors();
         errors.Add("name", DomainValidation.Name(command.Name));
+        errors.Add("login", DomainValidation.Login(command.Login));
         errors.Add("email", DomainValidation.Email(command.Email));
         errors.Add("password", DomainValidation.Password(command.Password));
-        errors.Add("confirmPassword", DomainValidation.ConfirmPassword(command.ConfirmPassword, command.Password));
+        errors.Add("repeatPassword", DomainValidation.RepeatPassword(command.RepeatPassword, command.Password));
         errors.ThrowIfAny();
 
+        var login = Login.Create(command.Login);
         var email = Email.Create(command.Email);
-        if (await _users.ExistsByEmailAsync(email.Value, cancellationToken: cancellationToken))
+
+        // Дубликат логина проверяется РАНЬШЕ дубликата email (порядок
+        // эталонной регистрации); сравнение — без учёта регистра.
+        if (await _users.FindByLoginAsync(login.Value, cancellationToken) is not null)
+        {
+            throw new ConflictException(Messages.LoginTaken);
+        }
+
+        if (await _users.FindByEmailAsync(email.Value, cancellationToken) is not null)
         {
             throw new ConflictException(Messages.EmailTaken);
         }
 
+        // Роль всегда базовая (user) — выдать admin через регистрацию нельзя.
         var user = User.Create(
+            login,
             PersonName.Create(command.Name),
             email,
             _passwordHasher.Hash(command.Password));
@@ -82,11 +98,19 @@ public sealed class AuthService : IAuthService
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var email = (command.Email ?? string.Empty).Trim();
-        var user = await _users.FindByEmailAsync(email, cancellationToken);
+        var login = (command.Login ?? string.Empty).Trim();
+        var user = await _users.FindByLoginAsync(login, cancellationToken);
         if (user is null || !_passwordHasher.Verify(command.Password ?? string.Empty, user.PasswordHash))
         {
             throw new UnauthorizedException(Messages.WrongCredentials);
+        }
+
+        // Пароль верный, но аккаунт заблокирован администратором: отдельный
+        // 403 с понятным текстом (не раскрывает существование аккаунта при
+        // неверном пароле — там по-прежнему единый 401).
+        if (user.IsBlocked)
+        {
+            throw new AccountBlockedException(Messages.AccountBlocked);
         }
 
         return new AuthResult { User = user, Token = _tokenService.CreateToken(user) };

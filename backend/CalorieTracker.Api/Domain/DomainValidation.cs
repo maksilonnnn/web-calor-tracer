@@ -12,6 +12,7 @@ public static partial class DomainValidation
     public const int PasswordMinLength = 8;
     public const int EmailMaxLength = 254;
     public const int NameMaxLength = 100;
+    public const int LoginMaxLength = 100;
     public const int ProductNameMaxLength = 100;
 
     /// <summary>Верхняя граница количества, граммы.</summary>
@@ -19,6 +20,35 @@ public static partial class DomainValidation
 
     /// <summary>Верхняя граница питательного значения на 100 г.</summary>
     public const double MaxNutrientPer100g = 10_000;
+
+    /// <summary>
+    /// Чёрный список типовых паролей (сравнение без учёта регистра).
+    /// Не даёт зарегистрироваться с паролем, который легко подобрать.
+    /// </summary>
+    private static readonly HashSet<string> CommonPasswords = new(StringComparer.Ordinal)
+    {
+        "12345678",
+        "123456789",
+        "1234567890",
+        "87654321",
+        "11111111",
+        "00000000",
+        "12341234",
+        "qwerty",
+        "qwerty123",
+        "qwertyuiop",
+        "password",
+        "password1",
+        "password123",
+        "admin123",
+        "admin1234",
+        "letmein",
+        "welcome",
+        "iloveyou",
+        "abc12345",
+        "qazwsxedc",
+        "asdfghjkl",
+    };
 
     public static bool IsBlank(string? value) => string.IsNullOrWhiteSpace(value);
 
@@ -33,6 +63,33 @@ public static partial class DomainValidation
         return value!.Trim().Length > NameMaxLength
             ? new[] { ValidationTexts.NameLength }
             : Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// Логин: обязательность, не более 100 символов и допустимый состав
+    /// (латиница, цифры, точка, дефис, подчёркивание) после trim. Возвращает
+    /// ВСЕ нарушенные правила одновременно — как на клиенте.
+    /// </summary>
+    public static IReadOnlyList<string> Login(string? value)
+    {
+        if (IsBlank(value))
+        {
+            return new[] { ValidationTexts.Required };
+        }
+
+        var login = value!.Trim();
+        var errors = new List<string>(2);
+        if (login.Length > LoginMaxLength)
+        {
+            errors.Add(ValidationTexts.LoginLength);
+        }
+
+        if (!LoginPattern().IsMatch(login))
+        {
+            errors.Add(ValidationTexts.LoginCharset);
+        }
+
+        return errors;
     }
 
     /// <summary>Email: формат логин@домен.зона и длина 1–254 после trim.</summary>
@@ -62,7 +119,7 @@ public static partial class DomainValidation
             return new[] { ValidationTexts.Required };
         }
 
-        var errors = new List<string>(4);
+        var errors = new List<string>(5);
         if (value.Length < PasswordMinLength)
         {
             errors.Add(ValidationTexts.PasswordMin);
@@ -83,13 +140,18 @@ public static partial class DomainValidation
             errors.Add(ValidationTexts.PasswordSpecial);
         }
 
+        if (CommonPasswords.Contains(value.ToLowerInvariant()))
+        {
+            errors.Add(ValidationTexts.PasswordCommon);
+        }
+
         return errors;
     }
 
-    /// <summary>Повтор пароля: обязательность + совпадение (дословно, без trim).</summary>
-    public static IReadOnlyList<string> ConfirmPassword(string? confirm, string? password)
+    /// <summary>Повтор пароля (repeatPassword/confirmPassword): обязательность + дословное совпадение без trim.</summary>
+    public static IReadOnlyList<string> RepeatPassword(string? repeat, string? password)
     {
-        var value = confirm ?? string.Empty;
+        var value = repeat ?? string.Empty;
         var errors = new List<string>(2);
         if (IsBlank(value))
         {
@@ -160,4 +222,8 @@ public static partial class DomainValidation
 
     [GeneratedRegex(@"^[^\s@]+@([^\s@.]+\.)+[^\s@.]+$")]
     private static partial Regex EmailPattern();
+
+    /// <summary>Логин: латиница, цифры, точка, дефис, подчёркивание.</summary>
+    [GeneratedRegex(@"^[A-Za-z0-9._-]+$")]
+    private static partial Regex LoginPattern();
 }
