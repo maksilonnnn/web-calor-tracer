@@ -38,6 +38,8 @@ const PASSWORD_MIN_LENGTH = 8;
 const EMAIL_MAX_LENGTH = 254;
 /** Максимальная длина имени пользователя (включительно). */
 const NAME_MAX_LENGTH = 100;
+/** Максимальная длина логина после трима (включительно). */
+const LOGIN_MAX_LENGTH = 100;
 /** Максимальная длина названия продукта (включительно). */
 const PRODUCT_NAME_MAX_LENGTH = 100;
 
@@ -52,6 +54,8 @@ const SPECIAL_CHAR_PATTERN = /[^\p{L}\d]/u;
  * непустые метки через точку, зона после последней точки непустая.
  */
 const EMAIL_PATTERN = /^[^\s@]+@([^\s@.]+\.)+[^\s@.]+$/;
+/** Логин: латиница, цифры, точка, дефис, подчёркивание. */
+const LOGIN_PATTERN = /^[A-Za-z0-9._-]+$/;
 
 /**
  * Чёрный список типовых паролей — зеркало DomainValidation.CommonPasswords
@@ -217,6 +221,30 @@ function boundedText(errorKey: FieldErrorKey, maxLength: number): ValidatorFn {
 /** Имя пользователя: 1–100 символов после трима. */
 export function name(): ValidatorFn {
   return boundedText('name', NAME_MAX_LENGTH);
+}
+
+/**
+ * Логин (как у эталонного образца): длина 1–100 после трима и допустимый
+ * состав — латиница, цифры, точка, дефис, подчёркивание. Возвращает ВСЕ
+ * нарушенные правила одновременно; пустое значение не проверяется —
+ * обязательность задаёт requiredTrim.
+ */
+export function loginCharset(): ValidatorFn {
+  return (control: AbstractControl): FieldErrors | null => {
+    const raw = asString(control.value);
+    if (raw === null || raw.trim() === '') {
+      return null;
+    }
+    const login = raw.trim();
+    const violated: FieldErrorKey[] = [];
+    if (login.length > LOGIN_MAX_LENGTH) {
+      violated.push('login');
+    }
+    if (!LOGIN_PATTERN.test(login)) {
+      violated.push('login.charset');
+    }
+    return packErrors(violated);
+  };
 }
 
 /** Название продукта: 1–100 символов после трима. */

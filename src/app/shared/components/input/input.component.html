@@ -10,6 +10,7 @@
           [value]="value()"
           [disabled]="isDisabled()"
           [class.has-error]="error()"
+          [attr.autocomplete]="autocomplete() || null"
           (input)="onInput($event)"
           (blur)="onBlur()"
         />
@@ -17,6 +18,9 @@
           <span class="field-unit">{{ unit() }}</span>
         }
       </div>
+      @if (hint()) {
+        <span class="input-hint">{{ hint() }}</span>
+      }
       @if (error()) {
         <span class="input-error">{{ error() }}</span>
       }

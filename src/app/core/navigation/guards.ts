@@ -21,8 +21,15 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { UserRole } from '../../shared/models';
 import { AuthService, MeDto } from '../services/auth.service';
 import { GlobalLoaderService } from '../services/global-loader.service';
+
+/** Домашний маршрут по роли (как в эталонном образце): после входа и для гостя. */
+export const ROLE_HOME: Record<UserRole, string> = {
+  user: '/',
+  admin: '/',
+};
 
 /** Домашний маршрут авторизованной части — дашборд. */
 export const HOME_PATH = '/';
@@ -32,9 +39,9 @@ function toLogin(router: Router): UrlTree {
   return router.parseUrl('/login');
 }
 
-/** UrlTree домашнего маршрута. */
-function toHome(router: Router): UrlTree {
-  return router.parseUrl(HOME_PATH);
+/** UrlTree домашнего маршрута роли (ROLE_HOME). */
+function toHome(router: Router, role: UserRole): UrlTree {
+  return router.parseUrl(ROLE_HOME[role]);
 }
 
 /** Текущий пользователь для решения guard'а; нет сессии/сбой → null. */
@@ -65,8 +72,8 @@ export const authGuard: CanActivateFn = async () => {
 };
 
 /**
- * Гостевые страницы: есть сессия → домашний маршрут, гость (и битая сессия,
- * очищенная loadMe) → навигация разрешена.
+ * Гостевые страницы: есть сессия → домашний маршрут роли, гость (и битая
+ * сессия, очищенная loadMe) → навигация разрешена.
  */
 export const guestGuard: CanActivateFn = async () => {
   const router = inject(Router);
@@ -74,11 +81,11 @@ export const guestGuard: CanActivateFn = async () => {
     inject(AuthService),
     inject(GlobalLoaderService),
   );
-  return me !== null ? toHome(router) : true;
+  return me !== null ? toHome(router, me.role) : true;
 };
 
 /**
- * Корень и wildcard: есть сессия → домашний маршрут, иначе → /login.
+ * Корень и wildcard: есть сессия → домашний маршрут роли, иначе → /login.
  */
 export const homeGuard: CanActivateFn = async () => {
   const router = inject(Router);
@@ -86,7 +93,7 @@ export const homeGuard: CanActivateFn = async () => {
     inject(AuthService),
     inject(GlobalLoaderService),
   );
-  return me !== null ? toHome(router) : toLogin(router);
+  return me !== null ? toHome(router, me.role) : toLogin(router);
 };
 
 /**
@@ -102,5 +109,5 @@ export const adminGuard: CanActivateFn = async () => {
   if (me === null) {
     return toLogin(router);
   }
-  return me.role === 'admin' ? true : toHome(router);
+  return me.role === 'admin' ? true : toHome(router, me.role);
 };

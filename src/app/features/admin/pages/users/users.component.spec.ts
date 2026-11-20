@@ -26,6 +26,7 @@ interface UsersInternals {
 
 const ADMIN_ME: UserDto = {
   id: 'admin-1',
+  login: 'admin',
   name: 'Администратор',
   email: 'admin@example.com',
   role: 'admin',
@@ -33,6 +34,7 @@ const ADMIN_ME: UserDto = {
 
 const USER: AdminUser = {
   id: 'u1',
+  login: 'alex',
   name: 'Алексей',
   email: 'alex@example.com',
   role: 'user',

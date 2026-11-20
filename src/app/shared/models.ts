@@ -103,6 +103,8 @@ export type UserRole = 'user' | 'admin';
 /** Текущий пользователь — ответ auth.register/auth.login/auth.me (без пароля). */
 export interface UserDto {
   id: string;
+  /** Логин для входа; не меняется после регистрации. */
+  login: string;
   name: string;
   email: string;
   role: UserRole;
@@ -115,18 +117,19 @@ export interface AdminUser extends UserDto {
   createdAt: string;
 }
 
-/** Параметры auth.login. */
+/** Параметры auth.login: вход по логину. */
 export interface LoginParams {
-  email: string;
+  login: string;
   password: string;
 }
 
-/** Параметры auth.register. */
+/** Параметры auth.register (поля формы регистрации). */
 export interface RegisterParams {
   name: string;
+  login: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  repeatPassword: string;
 }
 
 /** Пищевая ценность нового продукта (на 100 г) — без id: его присваивает бэкенд. */

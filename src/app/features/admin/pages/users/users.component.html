@@ -12,7 +12,7 @@
             class="search-field"
             label="Поиск"
             type="text"
-            placeholder="Имя или email"
+            placeholder="Имя, логин или email"
             [formControl]="searchControl"
             (keyup.enter)="onSearch()"
             data-test="admin-search"
@@ -41,6 +41,7 @@
                 <thead>
                   <tr>
                     <th>Имя</th>
+                    <th>Логин</th>
                     <th>Email</th>
                     <th>Роль</th>
                     <th>Статус</th>
@@ -52,6 +53,7 @@
                   @for (user of users(); track user.id) {
                     <tr data-test="admin-row">
                       <td class="cell-name">{{ user.name }}</td>
+                      <td class="cell-login">{{ user.login }}</td>
                       <td class="cell-email">{{ user.email }}</td>
                       <td>
                         <span class="role-badge" [class.role-admin]="user.role === 'admin'">

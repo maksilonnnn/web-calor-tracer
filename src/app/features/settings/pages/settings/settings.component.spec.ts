@@ -25,7 +25,7 @@ interface SettingsInternals {
   deleteAccount(): Promise<void>;
 }
 
-const ME: UserDto = { id: 'u1', name: 'Алексей', email: 'alex@example.com', role: 'user' };
+const ME: UserDto = { id: 'u1', login: 'alex', name: 'Алексей', email: 'alex@example.com', role: 'user' };
 const SAVED: Settings = { ...DEFAULT_SETTINGS, weightUnit: 'kg', notificationsEnabled: false };
 
 describe('SettingsComponent', () => {

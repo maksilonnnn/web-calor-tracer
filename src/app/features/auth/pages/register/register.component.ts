@@ -1,8 +1,12 @@
 /**
- * Страница регистрации (/register): реактивная форма, вход после успеха.
+ * Страница регистрации (/register) — по эталонному образцу преподавателя:
+ * форма Имя / Логин / Email / Пароль / Повторите пароль с подсказками;
+ * роли на форме нет — регистрация всегда создаёт пользователя (user).
  * Валидация — валидаторами shared/validation; тексты ошибок полей — только
- * из ERROR_TEXTS и показываются после touched. Отказы бэкенда (занятый email)
- * показываются дословно через NotificationService.
+ * из ERROR_TEXTS и показываются после touched. Отказы бэкенда (занятый
+ * логин/email) показываются дословно через NotificationService. Успех —
+ * автоматический вход (сервис кэширует currentUser) и редирект по
+ * ROLE_HOME[role].
  */
 import {
   ChangeDetectionStrategy,
@@ -13,6 +17,7 @@ import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
+import { ROLE_HOME } from '../../../../core/navigation/guards';
 import { AuthService } from '../../../../core/services/auth.service';
 import { toApiError } from '../../../../shared/api-error';
 import { ButtonComponent } from '../../../../shared/components/button/button.component';
@@ -24,12 +29,16 @@ import { ERROR_TEXTS, INVALID_FORM_MESSAGE } from '../../../../shared/validation
 import {
   emailFormat,
   firstErrorText,
+  loginCharset,
   name as nameRule,
   passwordMatch,
   passwordRules,
   requiredTrim,
   trimFormValues,
 } from '../../../../shared/validation/validators';
+
+/** Имена полей формы регистрации. */
+type RegisterField = 'name' | 'login' | 'email' | 'password' | 'repeatPassword';
 
 @Component({
   selector: 'app-register',
@@ -45,9 +54,14 @@ export class RegisterComponent {
 
   protected readonly submitState = submitting();
 
+  /**
+   * Правила — те же валидаторы, что применяет бэкенд (единый источник
+   * границ); пара — passwordMatch на всю группу.
+   */
   protected readonly form = new FormGroup(
     {
       name: new FormControl('', { nonNullable: true, validators: [requiredTrim(), nameRule()] }),
+      login: new FormControl('', { nonNullable: true, validators: [requiredTrim(), loginCharset()] }),
       email: new FormControl('', {
         nonNullable: true,
         validators: [requiredTrim(), emailFormat()],
@@ -56,9 +70,9 @@ export class RegisterComponent {
         nonNullable: true,
         validators: [requiredTrim(), passwordRules()],
       }),
-      confirmPassword: new FormControl('', { nonNullable: true, validators: [requiredTrim()] }),
+      repeatPassword: new FormControl('', { nonNullable: true, validators: [requiredTrim()] }),
     },
-    { validators: passwordMatch('password', 'confirmPassword') },
+    { validators: passwordMatch('password', 'repeatPassword') },
   );
 
   async onSubmit(): Promise<void> {
@@ -68,11 +82,12 @@ export class RegisterComponent {
       return;
     }
     trimFormValues(this.form);
-    const input = this.form.getRawValue();
+    const params = this.form.getRawValue();
     await this.submitState.run(async () => {
       try {
-        await firstValueFrom(this.auth.register(input));
-        await this.router.navigate(['/']);
+        const me = await firstValueFrom(this.auth.register(params));
+        // Автологин уже выполнен бэкендом (cookie) и сервисом (кэш currentUser).
+        await this.router.navigate([ROLE_HOME[me.role]]);
       } catch (error) {
         this.notifications.notifyError(toApiError(error).body.message);
       }
@@ -80,29 +95,34 @@ export class RegisterComponent {
   }
 
   protected nameError(): string {
-    return this.fieldError(this.form.controls.name);
+    return this.fieldError('name');
+  }
+
+  protected loginError(): string {
+    return this.fieldError('login');
   }
 
   protected emailError(): string {
-    return this.fieldError(this.form.controls.email);
+    return this.fieldError('email');
   }
 
   protected passwordError(): string {
-    return this.fieldError(this.form.controls.password);
+    return this.fieldError('password');
   }
 
-  protected confirmPasswordError(): string {
-    const own = this.fieldError(this.form.controls.confirmPassword);
+  protected repeatPasswordError(): string {
+    const own = this.fieldError('repeatPassword');
     if (own !== '') {
       return own;
     }
     const mismatch =
       this.form.hasError('password.mismatch') &&
-      this.form.controls.confirmPassword.touched;
+      this.form.controls.repeatPassword.touched;
     return mismatch ? ERROR_TEXTS['password.mismatch'] : '';
   }
 
-  private fieldError(control: AbstractControl): string {
+  private fieldError(field: RegisterField): string {
+    const control = this.form.controls[field];
     return control.touched ? firstErrorText(control.errors) ?? '' : '';
   }
 }

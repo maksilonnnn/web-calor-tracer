@@ -12,7 +12,13 @@ import { UserDto } from '../../shared/models';
 import { AuthService } from '../services/auth.service';
 import { adminGuard, authGuard, guestGuard, homeGuard } from './guards';
 
-const ME: UserDto = { id: 'user-1', name: 'Алексей', email: 'alex@example.com', role: 'user' };
+const ME: UserDto = {
+  id: 'user-1',
+  login: 'alex',
+  name: 'Алексей',
+  email: 'alex@example.com',
+  role: 'user',
+};
 const ADMIN: UserDto = { ...ME, role: 'admin' };
 const HOME = '/';
 const LOGIN = '/login';

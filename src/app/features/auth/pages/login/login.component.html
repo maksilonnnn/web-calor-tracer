@@ -2,17 +2,18 @@
       <app-card class="login-card">
         <div class="login-header">
           <h1 class="login-title" data-test="login-title">Вход в аккаунт</h1>
-          <p class="login-subtitle">Введите email и пароль</p>
+          <p class="login-subtitle">Введите логин и пароль</p>
         </div>
 
         <form [formGroup]="form" (ngSubmit)="onSubmit()" class="login-form">
           <app-input
-            label="Email"
-            type="email"
-            placeholder="example@mail.com"
-            formControlName="email"
-            [error]="emailError()"
-            data-test="email-input"
+            label="Логин"
+            type="text"
+            placeholder="Введите логин"
+            formControlName="login"
+            autocomplete="username"
+            [error]="loginError()"
+            data-test="login-input"
           />
 
           <app-input
@@ -20,6 +21,7 @@
             type="password"
             placeholder="Введите пароль"
             formControlName="password"
+            autocomplete="current-password"
             [error]="passwordError()"
             data-test="password-input"
           />

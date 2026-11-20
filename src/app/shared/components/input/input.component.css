@@ -57,6 +57,10 @@
       color: var(--text-secondary);
       pointer-events: none;
     }
+    .input-hint {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
     .input-error {
       font-size: 12px;
       color: var(--accent-red);

@@ -89,6 +89,10 @@
       font-weight: 600;
       color: var(--text-primary);
     }
+    .cell-login {
+      font-family: var(--font-mono, monospace);
+      color: var(--text-secondary);
+    }
     .cell-email {
       color: var(--text-secondary);
     }

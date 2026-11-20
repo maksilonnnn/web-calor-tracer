@@ -12,6 +12,7 @@ import { AdminService } from './admin.service';
 
 const USER: AdminUser = {
   id: 'u1',
+  login: 'alex',
   name: 'Алексей',
   email: 'alex@example.com',
   role: 'user',
