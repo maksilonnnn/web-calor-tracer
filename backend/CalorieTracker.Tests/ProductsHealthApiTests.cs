@@ -83,9 +83,10 @@ public sealed class ProductsHealthApiTests : IClassFixture<CalorieTrackerFactory
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = "Безопасный",
+            login = $"u{Guid.NewGuid():N}",
             email = $"{Guid.NewGuid():N}@example.com",
             password = "Passw0rd!",
-            confirmPassword = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
         });
 
         var raw = await response.Content.ReadAsStringAsync();

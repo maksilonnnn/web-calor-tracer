@@ -2,22 +2,28 @@ using CalorieTracker.Api.Domain;
 
 namespace CalorieTracker.Api.Presentation.Contracts;
 
-/// <summary>Тело запроса auth.register.</summary>
+/// <summary>
+/// Тело запроса auth.register (поля формы регистрации). Роли в теле нет:
+/// лишние поля (включая role) связывателем игнорируются — регистрацию всегда
+/// проходит пользователь с базовой ролью.
+/// </summary>
 public sealed class RegisterRequest
 {
     public string? Name { get; init; }
+
+    public string? Login { get; init; }
 
     public string? Email { get; init; }
 
     public string? Password { get; init; }
 
-    public string? ConfirmPassword { get; init; }
+    public string? RepeatPassword { get; init; }
 }
 
-/// <summary>Тело запроса auth.login.</summary>
+/// <summary>Тело запроса auth.login: логин и пароль.</summary>
 public sealed class LoginRequest
 {
-    public string? Email { get; init; }
+    public string? Login { get; init; }
 
     public string? Password { get; init; }
 }

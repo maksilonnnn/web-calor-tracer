@@ -15,6 +15,8 @@ internal sealed class UserRecord
 {
     public Guid Id { get; set; }
 
+    public string Login { get; set; } = string.Empty;
+
     public string Name { get; set; } = string.Empty;
 
     public string Email { get; set; } = string.Empty;
@@ -88,6 +90,14 @@ internal sealed class EfUserRepository(CalorieTrackerDbContext db) : IUserReposi
         return record is null ? null : ToDomain(record);
     }
 
+    public async Task<User?> FindByLoginAsync(string login, CancellationToken cancellationToken = default)
+    {
+        var normalized = login.Trim().ToLower();
+        var record = await db.Users.AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Login.ToLower() == normalized, cancellationToken);
+        return record is null ? null : ToDomain(record);
+    }
+
     public async Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         var normalized = email.Trim().ToLower();
@@ -145,7 +155,9 @@ internal sealed class EfUserRepository(CalorieTrackerDbContext db) : IUserReposi
         if (!string.IsNullOrEmpty(term))
         {
             query = query.Where(u =>
-                u.Name.ToLower().Contains(term) || u.Email.ToLower().Contains(term));
+                u.Name.ToLower().Contains(term)
+                || u.Login.ToLower().Contains(term)
+                || u.Email.ToLower().Contains(term));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -165,6 +177,7 @@ internal sealed class EfUserRepository(CalorieTrackerDbContext db) : IUserReposi
 
     private static User ToDomain(UserRecord record) =>
         User.Create(
+            Login.Create(record.Login),
             PersonName.Create(record.Name),
             Email.Create(record.Email),
             record.PasswordHash,
@@ -177,6 +190,7 @@ internal sealed class EfUserRepository(CalorieTrackerDbContext db) : IUserReposi
     private static UserRecord ToRecord(UserRecord record, User user)
     {
         record.Id = user.Id;
+        record.Login = user.Login.Value;
         record.Name = user.Name.Value;
         record.Email = user.Email.Value;
         record.PasswordHash = user.PasswordHash;

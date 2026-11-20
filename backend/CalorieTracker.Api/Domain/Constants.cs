@@ -16,6 +16,9 @@ public static class ValidationTexts
     public const string PasswordCommon = "Пароль слишком простой";
     public const string EmailFormat = "Введите корректный email";
     public const string EmailLength = "Email — не более 254 символов";
+    public const string LoginLength = "Логин — от 1 до 100 символов";
+    public const string LoginCharset =
+        "Логин может содержать только латинские буквы, цифры, точку, дефис и подчёркивание";
     public const string NameLength = "Имя — от 1 до 100 символов";
     public const string ProductNameLength = "Название — от 1 до 100 символов";
     public const string QuantityPositive = "Количество должно быть больше 0";
@@ -37,8 +40,9 @@ public static class Messages
 {
     public const string Unauthorized = "Не авторизован";
     public const string Forbidden = "Доступ запрещён";
+    public const string LoginTaken = "Пользователь с таким логином уже существует";
     public const string EmailTaken = "Пользователь с таким email уже существует";
-    public const string WrongCredentials = "Неверный email или пароль";
+    public const string WrongCredentials = "Неверный логин или пароль";
     public const string AccountBlocked = "Аккаунт заблокирован";
     public const string UserNotFound = "Пользователь не найден";
     public const string CannotChangeOwnBlock = "Нельзя изменить блокировку собственного аккаунта";

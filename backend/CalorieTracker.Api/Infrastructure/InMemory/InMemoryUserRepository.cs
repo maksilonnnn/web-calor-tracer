@@ -29,6 +29,16 @@ public sealed class InMemoryUserRepository : IUserRepository
         }
     }
 
+    public Task<User?> FindByLoginAsync(string login, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_db.SyncRoot)
+        {
+            return Task.FromResult(_db.Users.Values.FirstOrDefault(user =>
+                string.Equals(user.Login.Value, login, StringComparison.OrdinalIgnoreCase)));
+        }
+    }
+
     public Task<User?> FindByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -100,6 +110,7 @@ public sealed class InMemoryUserRepository : IUserRepository
             {
                 query = query.Where(user =>
                     user.Name.Value.Contains(term, StringComparison.OrdinalIgnoreCase)
+                    || user.Login.Value.Contains(term, StringComparison.OrdinalIgnoreCase)
                     || user.Email.Value.Contains(term, StringComparison.OrdinalIgnoreCase));
             }
 

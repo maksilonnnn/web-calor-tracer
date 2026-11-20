@@ -5,11 +5,15 @@ namespace CalorieTracker.Api.Domain.Entities;
 /// <summary>
 /// Пользователь системы. Пароль хранится только в виде хеша PBKDF2 —
 /// открытый пароль нигде не сохраняется. Идентификатор — Guid (в API
-/// отдаётся строкой uuid).
+/// отдаётся строкой uuid). Вход выполняется по уникальному логину,
+/// email — контактные данные.
 /// </summary>
 public sealed class User
 {
     public Guid Id { get; }
+
+    /// <summary>Логин для входа. Уникален без учёта регистра, не меняется после регистрации.</summary>
+    public Login Login { get; private set; }
 
     public PersonName Name { get; private set; }
 
@@ -28,6 +32,7 @@ public sealed class User
 
     private User(
         Guid id,
+        Login login,
         PersonName name,
         Email email,
         string passwordHash,
@@ -36,6 +41,7 @@ public sealed class User
         bool isBlocked)
     {
         Id = id;
+        Login = login;
         Name = name;
         Email = email;
         PasswordHash = passwordHash;
@@ -45,6 +51,7 @@ public sealed class User
     }
 
     public static User Create(
+        Login login,
         PersonName name,
         Email email,
         string passwordHash,
@@ -54,6 +61,7 @@ public sealed class User
         bool isBlocked = false) =>
         new(
             id ?? Guid.NewGuid(),
+            login,
             name,
             email,
             passwordHash,

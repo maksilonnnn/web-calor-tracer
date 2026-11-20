@@ -12,6 +12,7 @@ public static class DtoMapper
     public static UserDto ToDto(User user) => new()
     {
         Id = user.Id,
+        Login = user.Login.Value,
         Name = user.Name.Value,
         Email = user.Email.Value,
         Role = UserRoles.FromRole(user.Role),
@@ -20,6 +21,7 @@ public static class DtoMapper
     public static AdminUserDto ToAdminDto(User user) => new()
     {
         Id = user.Id,
+        Login = user.Login.Value,
         Name = user.Name.Value,
         Email = user.Email.Value,
         Role = UserRoles.FromRole(user.Role),

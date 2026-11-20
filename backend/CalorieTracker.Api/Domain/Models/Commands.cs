@@ -1,21 +1,26 @@
 namespace CalorieTracker.Api.Domain.Models;
 
-/// <summary>Команда регистрации (поля формы регистрации).</summary>
+/// <summary>
+/// Команда регистрации (поля формы регистрации). Роли в команде нет —
+/// регистрация всегда создаёт пользователя с базовой ролью.
+/// </summary>
 public sealed class RegisterCommand
 {
     public string Name { get; init; } = string.Empty;
+
+    public string Login { get; init; } = string.Empty;
 
     public string Email { get; init; } = string.Empty;
 
     public string Password { get; init; } = string.Empty;
 
-    public string ConfirmPassword { get; init; } = string.Empty;
+    public string RepeatPassword { get; init; } = string.Empty;
 }
 
-/// <summary>Команда входа.</summary>
+/// <summary>Команда входа по логину.</summary>
 public sealed class LoginCommand
 {
-    public string Email { get; init; } = string.Empty;
+    public string Login { get; init; } = string.Empty;
 
     public string Password { get; init; } = string.Empty;
 }

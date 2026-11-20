@@ -96,7 +96,7 @@ public sealed class ProfileService : IProfileService
 
         var errors = new ValidationErrors();
         errors.Add("password", DomainValidation.Password(command.Password));
-        errors.Add("confirmPassword", DomainValidation.ConfirmPassword(command.ConfirmPassword, command.Password));
+        errors.Add("confirmPassword", DomainValidation.RepeatPassword(command.ConfirmPassword, command.Password));
         errors.ThrowIfAny();
 
         user.ChangePasswordHash(_passwordHasher.Hash(command.Password));

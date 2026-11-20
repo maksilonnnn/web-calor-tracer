@@ -11,17 +11,19 @@ namespace CalorieTracker.Api.Infrastructure.InMemory.Seed;
 
 /// <summary>
 /// Начальное заполнение in-memory заглушки: два демо-пользователя —
-/// обычный (alex@example.com / Demo1234!) и администратор
-/// (admin@example.com / Admin1234!), каталог продуктов, дневник за сегодня
+/// обычный (логин alex / Demo1234!) и администратор
+/// (логин admin / Admin1234!), каталог продуктов, дневник за сегодня
 /// и два предыдущих дня, настройки по умолчанию.
 /// Идемпотентно: повторный запуск при непустом хранилище ничего не делает.
 /// </summary>
 public sealed class DatabaseSeeder
 {
+    private const string DemoLogin = "alex";
     private const string DemoName = "Алексей";
     private const string DemoEmail = "alex@example.com";
     private const string DemoPassword = "Demo1234!";
 
+    private const string AdminLogin = "admin";
     private const string AdminName = "Администратор";
     private const string AdminEmail = "admin@example.com";
     private const string AdminPassword = "Admin1234!";
@@ -69,6 +71,7 @@ public sealed class DatabaseSeeder
         }
 
         var user = User.Create(
+            Login.Create(DemoLogin),
             PersonName.Create(DemoName),
             Email.Create(DemoEmail),
             _passwordHasher.Hash(DemoPassword));
@@ -77,6 +80,7 @@ public sealed class DatabaseSeeder
         // Второй демо-аккаунт — администратор. Роль задаётся только сидом,
         // через API выдать её нельзя.
         var admin = User.Create(
+            Login.Create(AdminLogin),
             PersonName.Create(AdminName),
             Email.Create(AdminEmail),
             _passwordHasher.Hash(AdminPassword),

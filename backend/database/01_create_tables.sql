@@ -8,9 +8,11 @@ SET client_encoding = 'UTF8';
 
 BEGIN;
 
--- Пользователи. Email уникален без учёта регистра.
+-- Пользователи. Вход — по уникальному логину (без учёта регистра),
+-- email уникален без учёта регистра.
 CREATE TABLE IF NOT EXISTS users (
     id            uuid         PRIMARY KEY DEFAULT gen_random_uuid(),
+    login         varchar(100) NOT NULL CHECK (login ~ '^[A-Za-z0-9._-]{1,100}$'),
     name          varchar(100) NOT NULL CHECK (length(btrim(name)) BETWEEN 1 AND 100),
     email         varchar(254) NOT NULL,
     password_hash text         NOT NULL CHECK (btrim(password_hash) <> ''),
@@ -18,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     role          text         NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     is_blocked    boolean      NOT NULL DEFAULT false
 );
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_login ON users (lower(login));
 CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email ON users (lower(email));
 
 -- Настройки пользователя (1:1). Значения по умолчанию совпадают с

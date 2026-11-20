@@ -22,9 +22,10 @@ public sealed class AsyncErrorContractTests : IClassFixture<CalorieTrackerFactor
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = " ",
+            login = "bad login!",
             email = "not-an-email",
             password = "1",
-            confirmPassword = "2",
+            repeatPassword = "2",
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -68,9 +69,10 @@ public sealed class AsyncErrorContractTests : IClassFixture<CalorieTrackerFactor
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = "Другой Пользователь",
+            login = $"u{Guid.NewGuid():N}",
             email = user.Email,
             password = "Passw0rd!",
-            confirmPassword = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
         });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

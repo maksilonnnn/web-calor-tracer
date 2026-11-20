@@ -12,6 +12,7 @@ namespace CalorieTracker.Tests;
 /// <summary>Интеграционные тесты ролей, блокировки и админ-API.</summary>
 public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
 {
+    private const string AdminLogin = "admin";
     private const string AdminEmail = "admin@example.com";
     private const string AdminPassword = "Admin1234!";
 
@@ -22,7 +23,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
     [Fact]
     public async Task AdminSeed_HasAdminRole_AndCanReadUsers()
     {
-        var client = await LoginAsync(AdminEmail, AdminPassword);
+        var client = await LoginAsync(AdminLogin, AdminPassword);
 
         var response = await client.GetAsync("/api/v1/admin/users");
 
@@ -60,7 +61,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
     [Fact]
     public async Task Admin_CanBlockAndUnblock_User()
     {
-        var admin = await LoginAsync(AdminEmail, AdminPassword);
+        var admin = await LoginAsync(AdminLogin, AdminPassword);
         var (_, user) = await _factory.RegisterAsync();
 
         var block = await admin.PutAsync($"/api/v1/admin/users/{user.Id}/block", null);
@@ -84,7 +85,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
     [Fact]
     public async Task BlockedUser_CannotLogin_AndOldTokenIsRejected()
     {
-        var admin = await LoginAsync(AdminEmail, AdminPassword);
+        var admin = await LoginAsync(AdminLogin, AdminPassword);
         var (oldSession, user) = await _factory.RegisterAsync();
 
         var block = await admin.PutAsync($"/api/v1/admin/users/{user.Id}/block", null);
@@ -93,7 +94,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
         var freshClient = _factory.CreateClient();
         var login = await freshClient.PostAsJsonAsync("/api/v1/auth/login", new
         {
-            email = user.Email,
+            login = user.Login,
             password = "Passw0rd!",
         });
 
@@ -112,7 +113,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
     [Fact]
     public async Task Admin_CannotBlockSelf()
     {
-        var admin = await LoginAsync(AdminEmail, AdminPassword);
+        var admin = await LoginAsync(AdminLogin, AdminPassword);
         var me = await admin.GetAsync("/api/v1/auth/me");
         var current = await me.ReadAsync<UserResponse>();
 
@@ -126,7 +127,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
     [Fact]
     public async Task Admin_CannotBlockAnotherAdmin()
     {
-        var admin = await LoginAsync(AdminEmail, AdminPassword);
+        var admin = await LoginAsync(AdminLogin, AdminPassword);
         var otherAdmin = await CreateAdminAsync();
 
         var response = await admin.PutAsync($"/api/v1/admin/users/{otherAdmin.Id}/block", null);
@@ -144,9 +145,10 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = "Слабый Пароль",
+            login = $"u{Guid.NewGuid():N}",
             email = $"{Guid.NewGuid():N}@example.com",
             password = "qwerty123",
-            confirmPassword = "qwerty123",
+            repeatPassword = "qwerty123",
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -159,7 +161,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
     [Fact]
     public async Task AdminList_DoesNotExposePasswordHash()
     {
-        var admin = await LoginAsync(AdminEmail, AdminPassword);
+        var admin = await LoginAsync(AdminLogin, AdminPassword);
 
         var response = await admin.GetAsync("/api/v1/admin/users");
         var raw = await response.Content.ReadAsStringAsync();
@@ -169,10 +171,10 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
         Assert.DoesNotContain("password_hash", raw, StringComparison.OrdinalIgnoreCase);
     }
 
-    private async Task<HttpClient> LoginAsync(string email, string password)
+    private async Task<HttpClient> LoginAsync(string login, string password)
     {
         var client = _factory.CreateClient();
-        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { login, password });
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return client;
     }
@@ -184,6 +186,7 @@ public sealed class AdminApiTests : IClassFixture<CalorieTrackerFactory>
         var users = scope.ServiceProvider.GetRequiredService<IUserRepository>();
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         var admin = User.Create(
+            Login.Create($"admin{Guid.NewGuid():N}"[..20]),
             PersonName.Create("Второй Администратор"),
             Email.Create($"{Guid.NewGuid():N}@example.com"),
             hasher.Hash(AdminPassword),

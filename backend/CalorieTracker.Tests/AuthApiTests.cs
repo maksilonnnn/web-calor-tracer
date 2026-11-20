@@ -14,19 +14,22 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
     public async Task Register_Valid_Returns201WithHttpOnlyStrictCookie()
     {
         var client = _factory.CreateClient();
+        var login = $"u{Guid.NewGuid():N}";
         var email = $"{Guid.NewGuid():N}@example.com";
 
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = "Новый Пользователь",
+            login,
             email,
             password = "Passw0rd!",
-            confirmPassword = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var user = await response.ReadAsync<UserResponse>();
         Assert.Equal("Новый Пользователь", user.Name);
+        Assert.Equal(login, user.Login);
         Assert.Equal(email, user.Email);
 
         var cookie = response.FindCookieHeader("access_token");
@@ -43,9 +46,10 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = "",
+            login = "bad login!",
             email = "bad",
             password = "short",
-            confirmPassword = "different",
+            repeatPassword = "different",
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -53,9 +57,32 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
         Assert.Equal("Данные заполнены неверно", error.Message);
         Assert.NotNull(error.Errors);
         Assert.Contains("name", error.Errors!.Keys);
+        Assert.Contains("login", error.Errors.Keys);
         Assert.Contains("email", error.Errors.Keys);
         Assert.Contains("password", error.Errors.Keys);
-        Assert.Contains("confirmPassword", error.Errors.Keys);
+        Assert.Contains("repeatPassword", error.Errors.Keys);
+    }
+
+    [Fact]
+    public async Task Register_DuplicateLogin_Returns409()
+    {
+        var login = $"u{Guid.NewGuid():N}";
+        var first = await _factory.RegisterAsync(login: login);
+        Assert.NotEqual(Guid.Empty, first.User.Id);
+
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            name = "Дубль логина",
+            login = login.ToUpperInvariant(),
+            email = $"{Guid.NewGuid():N}@example.com",
+            password = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var error = await response.ReadErrorAsync();
+        Assert.Equal("Пользователь с таким логином уже существует", error.Message);
     }
 
     [Fact]
@@ -69,9 +96,10 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name = "Дубль",
+            login = $"u{Guid.NewGuid():N}",
             email = email.ToUpperInvariant(),
             password = "Passw0rd!",
-            confirmPassword = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
         });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -80,18 +108,74 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
     }
 
     [Fact]
+    public async Task Register_DuplicateLoginBeforeEmail_ReturnsLoginConflict()
+    {
+        // Порядок эталонной регистрации: дубликат логина проверяется РАНЬШЕ
+        // дубликата email — при обоих занятых конфликт по логину.
+        var login = $"u{Guid.NewGuid():N}";
+        var email = $"{Guid.NewGuid():N}@example.com";
+        await _factory.RegisterAsync(email, login: login);
+
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            name = "Дубль оба",
+            login,
+            email,
+            password = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var error = await response.ReadErrorAsync();
+        Assert.Equal("Пользователь с таким логином уже существует", error.Message);
+    }
+
+    [Fact]
+    public async Task Register_RoleInBody_IsIgnored()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            name = "Хочу Админку",
+            login = $"u{Guid.NewGuid():N}",
+            email = $"{Guid.NewGuid():N}@example.com",
+            password = "Passw0rd!",
+            repeatPassword = "Passw0rd!",
+            role = "admin",
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var user = await response.ReadAsync<UserResponse>();
+        Assert.Equal("user", user.Role);
+    }
+
+    [Fact]
     public async Task Login_DemoAccount_Returns200()
     {
         var client = _factory.CreateClient();
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
         {
-            email = "alex@example.com",
+            login = "alex",
             password = "Demo1234!",
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var user = await response.ReadAsync<UserResponse>();
-        Assert.Equal("alex@example.com", user.Email);
+        Assert.Equal("alex", user.Login);
+    }
+
+    [Fact]
+    public async Task Login_DemoAccountByLoginCaseInsensitive_Returns200()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            login = "ALEX",
+            password = "Demo1234!",
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -100,13 +184,28 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
         var client = _factory.CreateClient();
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
         {
-            email = "alex@example.com",
+            login = "alex",
             password = "wrong-password",
         });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         var error = await response.ReadErrorAsync();
-        Assert.Equal("Неверный email или пароль", error.Message);
+        Assert.Equal("Неверный логин или пароль", error.Message);
+    }
+
+    [Fact]
+    public async Task Login_UnknownLogin_Returns401WithSameMessage()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            login = $"no-such-user-{Guid.NewGuid():N}",
+            password = "whatever1!",
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var error = await response.ReadErrorAsync();
+        Assert.Equal("Неверный логин или пароль", error.Message);
     }
 
     [Fact]
@@ -130,6 +229,7 @@ public sealed class AuthApiTests : IClassFixture<CalorieTrackerFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var me = await response.ReadAsync<UserResponse>();
         Assert.Equal(user.Id, me.Id);
+        Assert.Equal(user.Login, me.Login);
     }
 
     [Fact]

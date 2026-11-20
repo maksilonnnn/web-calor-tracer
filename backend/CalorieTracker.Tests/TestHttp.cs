@@ -30,15 +30,17 @@ internal static class TestHttp
         this CalorieTrackerFactory factory,
         string? email = null,
         string name = "Тест Тестов",
-        string password = "Passw0rd!")
+        string password = "Passw0rd!",
+        string? login = null)
     {
         var client = factory.CreateClient();
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             name,
+            login = login ?? $"u{Guid.NewGuid():N}",
             email = email ?? $"{Guid.NewGuid():N}@example.com",
             password,
-            confirmPassword = password,
+            repeatPassword = password,
         });
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var user = await response.ReadAsync<UserResponse>();
@@ -58,7 +60,7 @@ internal static class TestHttp
     }
 }
 
-internal sealed record UserResponse(Guid Id, string Name, string Email);
+internal sealed record UserResponse(Guid Id, string Login, string Name, string Email, string Role);
 
 internal sealed record ErrorBody(string Message, Dictionary<string, string[]>? Errors);
 

@@ -12,6 +12,7 @@ public static partial class DomainValidation
     public const int PasswordMinLength = 8;
     public const int EmailMaxLength = 254;
     public const int NameMaxLength = 100;
+    public const int LoginMaxLength = 100;
     public const int ProductNameMaxLength = 100;
 
     /// <summary>Верхняя граница количества, граммы.</summary>
@@ -62,6 +63,33 @@ public static partial class DomainValidation
         return value!.Trim().Length > NameMaxLength
             ? new[] { ValidationTexts.NameLength }
             : Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// Логин: обязательность, не более 100 символов и допустимый состав
+    /// (латиница, цифры, точка, дефис, подчёркивание) после trim. Возвращает
+    /// ВСЕ нарушенные правила одновременно — как на клиенте.
+    /// </summary>
+    public static IReadOnlyList<string> Login(string? value)
+    {
+        if (IsBlank(value))
+        {
+            return new[] { ValidationTexts.Required };
+        }
+
+        var login = value!.Trim();
+        var errors = new List<string>(2);
+        if (login.Length > LoginMaxLength)
+        {
+            errors.Add(ValidationTexts.LoginLength);
+        }
+
+        if (!LoginPattern().IsMatch(login))
+        {
+            errors.Add(ValidationTexts.LoginCharset);
+        }
+
+        return errors;
     }
 
     /// <summary>Email: формат логин@домен.зона и длина 1–254 после trim.</summary>
@@ -120,10 +148,10 @@ public static partial class DomainValidation
         return errors;
     }
 
-    /// <summary>Повтор пароля: обязательность + совпадение (дословно, без trim).</summary>
-    public static IReadOnlyList<string> ConfirmPassword(string? confirm, string? password)
+    /// <summary>Повтор пароля (repeatPassword/confirmPassword): обязательность + дословное совпадение без trim.</summary>
+    public static IReadOnlyList<string> RepeatPassword(string? repeat, string? password)
     {
-        var value = confirm ?? string.Empty;
+        var value = repeat ?? string.Empty;
         var errors = new List<string>(2);
         if (IsBlank(value))
         {
@@ -194,4 +222,8 @@ public static partial class DomainValidation
 
     [GeneratedRegex(@"^[^\s@]+@([^\s@.]+\.)+[^\s@.]+$")]
     private static partial Regex EmailPattern();
+
+    /// <summary>Логин: латиница, цифры, точка, дефис, подчёркивание.</summary>
+    [GeneratedRegex(@"^[A-Za-z0-9._-]+$")]
+    private static partial Regex LoginPattern();
 }

@@ -2,10 +2,13 @@ using CalorieTracker.Api.Domain;
 
 namespace CalorieTracker.Api.Presentation.Contracts;
 
-/// <summary>Пользователь без пароля (ответ auth/profile).</summary>
+/// <summary>Пользователь без пароля (ответ auth.register/auth.login/auth.me/profile).</summary>
 public sealed class UserDto
 {
     public Guid Id { get; init; }
+
+    /// <summary>Логин для входа (не меняется после регистрации).</summary>
+    public string Login { get; init; } = string.Empty;
 
     public string Name { get; init; } = string.Empty;
 
@@ -21,6 +24,8 @@ public sealed class UserDto
 public sealed class AdminUserDto
 {
     public Guid Id { get; init; }
+
+    public string Login { get; init; } = string.Empty;
 
     public string Name { get; init; } = string.Empty;
 
