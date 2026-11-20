@@ -226,7 +226,8 @@ internal sealed class SqlDiaryRepository(NpgsqlDataSource dataSource) : IDiaryRe
                         @product,
                         @quantity)
                     ON CONFLICT (id) DO UPDATE
-                    SET product_id = EXCLUDED.product_id,
+                    SET meal_id = EXCLUDED.meal_id,
+                        product_id = EXCLUDED.product_id,
                         quantity_grams = EXCLUDED.quantity_grams
                     """,
                     cancellationToken,
