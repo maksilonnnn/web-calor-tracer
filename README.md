@@ -1,9 +1,9 @@
 # Трекер калорий — frontend (Angular) + backend (ASP.NET Core)
 
 Учебный проект «Трекер калорий»: SPA на Angular 20 и REST API на C#/ASP.NET
-Core (net10.0) в стиле DDD. Backend хранит данные в **in-memory заглушке**
-(без реальной БД и EF Core), frontend общается с ним по HTTP; браузерного
-мок-слоя больше нет.
+Core (net10.0) в стиле DDD. Backend хранит данные в **PostgreSQL** (Npgsql +
+EF Core), а для тестов и запуска без базы есть **in-memory заглушка**.
+Frontend общается с backend по HTTP; браузерного мок-слоя больше нет.
 
 Репозиторий содержит обе части:
 
@@ -13,21 +13,49 @@ Core (net10.0) в стиле DDD. Backend хранит данные в **in-memo
 ## Требования
 
 - **.NET SDK 10** (LTS) — проверено на `net10.0`;
+- **PostgreSQL 16+** (проверено на 18) и клиент `psql` — для режима `Postgres`;
 - **Node.js** 20.19+, 22.12+ или 24.x и **npm** 10+;
 - **Chrome** или **Edge** для headless-тестов клиента.
 
 ## Быстрый старт
 
-Терминал 1 — backend:
+### 1. База данных
+
+Скрипты выполняются по порядку из каталога `backend` (нужен `psql` в `PATH`;
+если его нет — используйте полный путь к `psql.exe` из установленного PostgreSQL):
+
+```powershell
+cd backend
+
+# 00 — создать базу calorie-tracker-web (подключение к служебной базе postgres).
+psql -h localhost -U postgres -d postgres -f database/00_create_database.sql
+
+# 01 — создать таблицы и индексы.
+psql -h localhost -U postgres -d calorie-tracker-web -f database/01_create_tables.sql
+
+# 02 — добавить position (если её ещё нет) и загрузить каталог продуктов.
+psql -h localhost -U postgres -d calorie-tracker-web -f database/02_alter_and_seed.sql
+```
+
+`00` не пересоздаёт существующую базу, `02` можно запускать повторно: каталог
+не задублируется. Демо-пользователи SQL-скриптами **не создаются**.
+
+### 2. Backend (из корня репозитория)
 
 ```powershell
 cd backend\CalorieTracker.Api
+
 dotnet user-secrets set "Auth:JwtKey" "<секрет не короче 32 символов>"
+dotnet user-secrets set "ConnectionStrings:CalorieTracker" "Host=localhost;Port=5432;Database=calorie-tracker-web;Username=postgres;Password=<пароль>"
+
 dotnet run
 # http://localhost:5254, Swagger UI: http://localhost:5254/swagger
 ```
 
-Терминал 2 — frontend (из корня репозитория):
+Строка подключения и JWT-ключ хранятся в user-secrets (вне репозитория).
+В `appsettings.json` оставлены только плейсхолдеры.
+
+### 3. Frontend (из корня репозитория)
 
 ```powershell
 npm install
@@ -35,9 +63,10 @@ npm start
 # http://localhost:4200 — запросы /api проксируются на http://localhost:5254
 ```
 
-Демо-учётка (создаётся сидом): **alex@example.com / Demo1234!**
-(имя — «Алексей»). Можно зарегистрировать нового пользователя — его дневник,
-настройки и профиль хранятся отдельно.
+В режиме `Postgres` демо-учётка не создаётся — зарегистрируйте пользователя
+через UI или `POST /api/v1/auth/register`. Демо-учётка
+**alex@example.com / Demo1234!** и демо-дневник есть только в режиме
+`InMemory` (тесты и запуск без PostgreSQL).
 
 ## Backend
 
@@ -46,6 +75,7 @@ npm start
 ```
 backend/
   CalorieTracker.sln
+  database/            # 00_create_database.sql, 01_create_tables.sql, 02_alter_and_seed.sql
   CalorieTracker.Api/
     Domain/            # ядро: сущности, объекты-значения, сервисы, интерфейсы репозиториев
       Common/          # PagedResult<T>, пагинация, парсер дат, ошибки валидации
@@ -56,9 +86,10 @@ backend/
       Nutrition/       # расчёт пищевой ценности
       Models/          # команды и модели дашборда
       Security/        # контракты хеширования и токенов
-    Infrastructure/    # заглушка-хранилище, сид, безопасность, настройки, DI
+    Infrastructure/    # PostgreSQL/InMemory, безопасность, настройки, DI
+      Postgres/        # SQL-репозитории (Npgsql) + EF Core (пользователи, настройки)
       InMemory/        # InMemoryDatabase + репозитории на словарях
-      InMemory/Seed/   # DatabaseSeeder, каталог продуктов
+      InMemory/Seed/   # DatabaseSeeder и каталог продуктов для InMemory
       Security/        # JwtTokenService (HS256), Pbkdf2PasswordHasher
       Options/         # Auth/Cors/Persistence/Seed
       DependencyInjection.cs
@@ -87,12 +118,14 @@ backend/
 | `Auth`              | `AccessTtlMinutes`              | Время жизни access-токена (минуты)                     |
 | `Auth`              | `CookieName`                    | Имя httpOnly-cookie (`access_token`)                   |
 | `Cors`              | `AllowedOrigins`                | Список разрешённых источников браузерного UI           |
-| `Persistence`       | `Provider`                      | `InMemory` (единственное поддерживаемое значение)      |
-| `Seed`              | `Enabled`                       | Заполнять ли заглушку демо-данными при старте          |
+| `ConnectionStrings` | `CalorieTracker`                | Строка подключения к PostgreSQL                        |
+| `Persistence`       | `Provider`                      | `Postgres` (по умолчанию) или `InMemory` (тесты)       |
+| `Seed`              | `Enabled`                       | Сид демо-данных; действует только в режиме `InMemory`  |
 
-`JwtKey` в репозитории пустой (плейсхолдер). Реальный ключ задаётся через
-user-secrets или переменную окружения **`Auth__JwtKey`**. Если ключ не задан
-или короче 32 символов, приложение **падает на старте** с понятным сообщением.
+`JwtKey` и пароль PostgreSQL в репозитории не хранятся. Реальные значения
+задаются через user-secrets или переменные окружения **`Auth__JwtKey`** и
+**`ConnectionStrings__CalorieTracker`**. Если `JwtKey` не задан или короче
+32 символов, приложение **падает на старте** с понятным сообщением.
 Файлы с секретами исключены через `backend/.gitignore`.
 
 ### Запуск
@@ -107,6 +140,52 @@ dotnet run --project CalorieTracker.Api
 `http://localhost:5254`; профиль `https` дополнительно слушает
 `https://localhost:7036`. Именно на `http://localhost:5254` настроен прокси
 клиента.
+
+### PostgreSQL
+
+Схема создаётся только SQL-скриптами из `backend/database`; миграции EF Core
+**не используются**. Порядок запуска:
+
+| Скрипт                    | Что делает                                                                 |
+|---------------------------|----------------------------------------------------------------------------|
+| `00_create_database.sql`  | Создаёт базу `calorie-tracker-web` (повторный запуск пропускается).         |
+| `01_create_tables.sql`    | Создаёт таблицы, ограничения, индексы и колонку `meal_items.position`.      |
+| `02_alter_and_seed.sql`   | Идемпотентно добавляет `position`, если её не было, и 8 продуктов каталога. |
+
+Репозитории разделены по технологиям:
+
+| Интерфейс             | Реализация | Технология                                      |
+|-----------------------|------------|-------------------------------------------------|
+| `IProductRepository`  | `SqlProductRepository` | чистый SQL через Npgsql                |
+| `IDiaryRepository`    | `SqlDiaryRepository`   | чистый SQL через Npgsql                |
+| `IUserRepository`     | `EfUserRepository`     | Entity Framework Core                  |
+| `ISettingsRepository` | `EfSettingsRepository` | Entity Framework Core                  |
+
+SQL-запросы перечисляют столбцы явно (без `SELECT *`). Все репозитории и
+зависящие от них доменные службы зарегистрированы как **scoped**;
+`NpgsqlDataSource` — singleton. В `Development` включены `ValidateScopes` и
+`ValidateOnBuild`, поэтому captive dependency падает на старте.
+
+Строка подключения задаётся в `ConnectionStrings:CalorieTracker` через
+user-secrets или переменную `ConnectionStrings__CalorieTracker`:
+
+```powershell
+cd backend\CalorieTracker.Api
+dotnet user-secrets set "ConnectionStrings:CalorieTracker" "Host=localhost;Port=5432;Database=calorie-tracker-web;Username=postgres;Password=<пароль>"
+```
+
+В `appsettings.json` лежит только плейсхолдер `Password=CHANGE_ME`.
+
+Переключение на in-memory заглушку (без PostgreSQL):
+
+```powershell
+$env:Persistence__Provider = "InMemory"
+dotnet run --project CalorieTracker.Api
+```
+
+В этом режиме при старте работает `DatabaseSeeder` (демо-учётка и дневник).
+Интеграционные тесты принудительно используют `InMemory` через
+`CalorieTrackerFactory` и не требуют запущенной базы.
 
 ### Swagger
 
@@ -125,7 +204,10 @@ dotnet test CalorieTracker.sln
 xUnit: доменные unit-тесты (объекты-значения, расчёты, валидация) и
 интеграционные тесты через `WebApplicationFactory` (успешные сценарии,
 400/401/404/409, границы пагинации, `totalCount`, доступ к чужим данным → 404,
-формат ошибок, отсутствие `passwordHash` в ответах).
+формат ошибок, отсутствие `passwordHash` в ответах). Интеграционные тесты
+работают на `InMemory`, поэтому весь набор из 74 тестов не требует PostgreSQL:
+`CalorieTrackerFactory` выставляет `Persistence__Provider=InMemory` до
+регистрации сервисов.
 
 ### REST API (`/api/v1`)
 
@@ -189,20 +271,14 @@ xUnit: доменные unit-тесты (объекты-значения, рас
 2. `ExceptionHandlingMiddleware` — перехватывает исключения, отдаёт единый
    формат ошибки, не раскрывает стектрейс.
 
-### Хранилище-заглушка и как заменить на реальную БД
+### InMemory-заглушка (тесты)
 
-Данные живут в `Infrastructure/InMemory` (потокобезопасные словари
-`InMemoryDatabase`), доступ — через интерфейсы `Domain/Repositories`.
-EF Core, миграции и реальная СУБД **не используются** (по условию задания).
-
-Замена на настоящую БД:
-
-1. реализуйте интерфейсы из `Domain/Repositories` над EF Core/Dapper (например,
-   `EfUserRepository`, `EfDiaryRepository`, …);
-2. зарегистрируйте их в `Infrastructure/DependencyInjection.cs` вместо
-   `InMemory*` при соответствующем значении `Persistence:Provider`;
-3. при необходимости замените `DatabaseSeeder` (он вызывается из `Program.cs`
-   и работает через те же интерфейсы репозиториев, поэтому остаётся валидным).
+`Infrastructure/InMemory` — потокобезопасные словари `InMemoryDatabase` и
+репозитории на их основе. Режим включается через
+`Persistence:Provider=InMemory` и используется интеграционными тестами.
+`DatabaseSeeder` вызывается только в этом режиме и создаёт демо-учётку,
+каталог и дневник; в `Postgres` он не запускается, поэтому демо-пользователи
+в реальной базе не появляются.
 
 ## Frontend
 
