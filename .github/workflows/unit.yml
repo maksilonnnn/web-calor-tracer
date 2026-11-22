@@ -1,0 +1,55 @@
+# Этап 1 CI: пуш любой ветки — юнит- и интеграционные тесты (без БД).
+#
+# Переиспользуется этапом 2 (pr-checks.yml вызывает через workflow_call),
+# чтобы прогоны на пушах и в PR были идентичными.
+name: unit
+
+on:
+  push:
+  workflow_call:
+
+# Новый пуш в ту же ветку отменяет предыдущий незавершённый прогон.
+concurrency:
+  group: unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Юнит-тесты клиента: Karma + Jasmine в headless-Chrome. Лаунчер
+  # ChromeHeadlessNoSandbox — встроенный в билдер @angular-devkit/build-angular:karma
+  # (getBuiltInKarmaConfig): в CI-контейнере sandbox Chrome недоступен, а
+  # встроенный лаунчер ChromeHeadless флаг --no-sandbox не передаёт.
+  client-unit:
+    name: client-unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Chrome предустановлен на ubuntu-runner; говорим карме, где он.
+      - name: Юнит-тесты клиента (Karma, ChromeHeadless)
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: |
+          npm ci
+          npm run test:ci
+
+  # Тесты API: интеграционные тесты поднимают приложение на in-memory
+  # заглушке (CalorieTrackerFactory), PostgreSQL не нужен. Регрессионный
+  # тест репозитория на реальной БД скипается без CALORIE_TEST_CONNECTION
+  # и гоняется отдельной джобой в pr-checks.yml (api-postgres).
+  api-unit:
+    name: api-unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Тесты API (xUnit, in-memory)
+        run: dotnet test backend/CalorieTracker.sln --nologo
