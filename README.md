@@ -1,5 +1,7 @@
 # Трекер калорий — frontend (Angular) + backend (ASP.NET Core)
 
+[![CI](https://github.com/maksilonnnn/web-calor-tracer/actions/workflows/unit.yml/badge.svg)](https://github.com/maksilonnnn/web-calor-tracer/actions/workflows/unit.yml)
+
 Учебный проект «Трекер калорий»: SPA на Angular 20 и REST API на C#/ASP.NET
 Core (net10.0) в стиле DDD. Backend хранит данные в **PostgreSQL** (Npgsql +
 EF Core), а для тестов и запуска без базы есть **in-memory заглушка**.
@@ -408,9 +410,26 @@ src/app/
 ## Тесты (итог)
 
 ```powershell
-cd backend;                 dotnet test CalorieTracker.sln   # 84 теста (83 выполнены, 1 пропущен)
-cd ..;                      npm test                          # 211 тестов
+cd backend;                 dotnet test CalorieTracker.sln   # 93 теста (92 выполнены, 1 пропущен)
+cd ..;                      npm test                          # 212 тестов
 ```
+
+## CI
+
+Тесты гоняются в GitHub Actions (`.github/workflows/`), без деплоя — хостинга нет.
+
+- **[unit.yml](.github/workflows/unit.yml)** — на каждый пуш любой ветки:
+  - `client-unit` — 212 юнит-тестов клиента (Karma + Jasmine, `ChromeHeadlessNoSandbox`);
+  - `api-unit` — 93 теста API (xUnit; интеграционные тесты — на in-memory заглушке,
+    регрессионный тест на реальной БД без `CALORIE_TEST_CONNECTION` честно скипается).
+- **[pr-checks.yml](.github/workflows/pr-checks.yml)** — гейт на любой Pull Request: юнит-прогон
+  (переиспользует `unit.yml` через `workflow_call`), прод-сборка клиента (strict-шаблоны +
+  бюджеты бандла) и `api-postgres` — все тесты API на реальной PostgreSQL
+  (service-контейнер `postgres:16`, схема применяется идемпотентными скриптами
+  `backend/database/01–04`, строка подключения передаётся через переменную окружения,
+  не в коде).
+
+Бейдж статуса CI — в шапке README.
 
 ## Документация
 

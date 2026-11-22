@@ -1,0 +1,81 @@
+# Этап 2 CI: Pull Request — полный гейт слияния.
+#
+# Юнит-прогон + прод-сборка клиента + интеграционные тесты API на реальной
+# PostgreSQL. Имена джоб (client-unit / api-unit / client-build /
+# api-postgres) — это статусы для branch protection: пока не пройдены,
+# PR слить нельзя (Settings → Branches → Require status checks).
+name: pr-checks
+
+on:
+  pull_request:
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.head.sha }}
+  cancel-in-progress: true
+
+jobs:
+  # Юнит-прогон — тот же, что и на этапе 1 (переиспользование воркфлоу).
+  unit:
+    uses: ./.github/workflows/unit.yml
+
+  # Прод-сборка клиента: strict-шаблоны и бюджеты бандла (500 kb) как
+  # дополнительный статический гейт перед слиянием.
+  client-build:
+    name: client-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Прод-сборка клиента
+        run: |
+          npm ci
+          npm run build
+
+  # Регрессионный тест репозитория на реальной PostgreSQL. Тест читает
+  # строку подключения из переменной окружения CALORIE_TEST_CONNECTION
+  # (без неё он честно скипается — см. api-unit на этапе 1). Схема
+  # применяется идемпотентными скриптами из backend/database до запуска
+  # тестов: имя базы задаётся в контейнере (POSTGRES_DB), поэтому скрипт
+  # 00_create_database.sql не нужен — достаточно 01–04.
+  api-postgres:
+    name: api-postgres
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: calorie-tracker-web
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Схема БД (01–04 — идемпотентные скрипты)
+        run: |
+          psql "postgresql://postgres:postgres@127.0.0.1:5432/calorie-tracker-web" \
+            -v ON_ERROR_STOP=1 \
+            -f backend/database/01_create_tables.sql \
+            -f backend/database/02_alter_and_seed.sql \
+            -f backend/database/03_add_auth_columns.sql \
+            -f backend/database/04_add_login.sql
+
+      - name: Тесты API (xUnit, реальная PostgreSQL)
+        env:
+          CALORIE_TEST_CONNECTION: "Host=127.0.0.1;Port=5432;Database=calorie-tracker-web;Username=postgres;Password=postgres"
+        run: dotnet test backend/CalorieTracker.sln --nologo
